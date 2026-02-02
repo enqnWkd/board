@@ -1,6 +1,8 @@
 package com.example.board.config;
 
 import com.example.board.security.jwt.JwtAuthenticationFilter;
+import com.example.board.security.jwt.JwtTokenProvider;
+import jakarta.servlet.Filter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,7 +22,7 @@ import static org.springframework.boot.autoconfigure.security.servlet.PathReques
 @RequiredArgsConstructor
 public class WebSecurityConfig {
 
-    private final UserDetailsService userDetailsService;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
@@ -38,15 +40,20 @@ public class WebSecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
+        JwtAuthenticationFilter jwtAuthenticationFilter =
+                new JwtAuthenticationFilter(jwtTokenProvider);
+
         return http
                 .sessionManagement(
                         session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(
                         auth -> auth
-                        .requestMatchers("/api/jwt/login").permitAll()
-                        .anyRequest().authenticated() //그외는 인증 필요
+                        .requestMatchers("/api/jwt/login", "/api/jwt/signup", "/h2-console/**").permitAll()
+                        .requestMatchers("/api/**").authenticated() //그외는 인증 필요
+                        .anyRequest().permitAll()
                 )
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .csrf(csrf -> csrf.disable())
                 .build();
     }
