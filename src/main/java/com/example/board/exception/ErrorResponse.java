@@ -1,23 +1,14 @@
 package com.example.board.exception;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import org.springframework.http.HttpStatus;
+
 import java.time.LocalDateTime;
 
+@Getter
+@AllArgsConstructor
 public class ErrorResponse {
-    private final int status;
-    private final String message;
-    private final LocalDateTime timestamp;
-
-    public ErrorResponse(int status, String message) {
-        this.status = status;
-        this.message = message;
-        this.timestamp = LocalDateTime.now();
-    }
-
-    public int getStatus() {
-        return status;
-    }
-
-    public String getMessage() {
-        return message;
-    }
+    private HttpStatus status;
+    private String message;
 }
