@@ -3,18 +3,39 @@ package com.example.board.service;
 import com.example.board.domain.User;
 import com.example.board.domain.UserRole;
 import com.example.board.dto.request.AddUserRequest;
+import com.example.board.dto.response.TokenResponse;
+import com.example.board.repository.RefreshTokenRepository;
 import com.example.board.repository.UserRepository;
+import com.example.board.security.UserDetailsImpl;
+import com.example.board.security.jwt.JwtTokenProvider;
+import com.example.board.security.jwt.RefreshTokenService;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-@Service
-public class UserService {
-    private UserRepository userRepository;
-    private BCryptPasswordEncoder encoder;
+import java.time.LocalDateTime;
 
-    public UserService(UserRepository userRepository, BCryptPasswordEncoder encoder) {
-        this.userRepository = userRepository;
-        this.encoder = encoder;
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class UserService {
+    private final JwtTokenProvider jwtTokenProvider;
+    private final RefreshTokenService refreshTokenService;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final UserRepository userRepository;
+    private final BCryptPasswordEncoder encoder;
+
+    public TokenResponse login(Authentication authentication) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+
+        User user = userDetails.getUser();
+
+        String accessToken = jwtTokenProvider.createAccessToken(user);
+        String refreshToken = refreshTokenService.createRefreshToken(user);
+
+        return new TokenResponse(accessToken, refreshToken);
     }
 
     public User save(AddUserRequest dto) {

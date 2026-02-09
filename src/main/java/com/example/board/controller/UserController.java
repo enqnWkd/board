@@ -9,6 +9,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.antlr.v4.runtime.Token;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -35,7 +37,7 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<TokenResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
 
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -43,11 +45,19 @@ public class UserController {
                 )
         );
 
-        String token = jwtTokenProvider.createToken(authentication);
+        TokenResponse tokenResponse = userService.login(authentication);
 
-        return ResponseEntity.ok(
-                new TokenResponse(token)
-        );
+        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", tokenResponse.getRefreshToken())
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(7 * 24 * 60 * 60)
+                .sameSite("Strict")
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .body(new TokenResponse(tokenResponse.getAccessToken(), null));
     }
 
     @PostMapping("/logout")

@@ -1,5 +1,6 @@
 package com.example.board.security.jwt;
 
+import com.example.board.domain.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -13,37 +14,48 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import javax.crypto.SecretKey;
-import java.security.Key;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
 public class JwtTokenProvider {
 
-    private final long EXPIRATION_TIME = 1000L * 60 * 60;
     private final SecretKey key;
+    private long accessTokenValidTime = 1000L * 60;
+    private long refreshTokenValidTime = 1000L * 60 * 60;
 
     public JwtTokenProvider(@Value("${jwt.secret}") String secretKey) {
         byte[] keyBytes = Decoders.BASE64URL.decode(secretKey);
         this.key = Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String createToken(Authentication authentication) {
-        String username = authentication.getName();
-        List<String> roles = authentication.getAuthorities()
-                .stream()
-                .map(GrantedAuthority::getAuthority)
-                .toList();
-
+    public String createAccessToken(User user) {
         Date now = new Date();
-        Date expiry = new Date(now.getTime() + EXPIRATION_TIME);
 
         return Jwts.builder()
-                .subject(username)
-                .claim("roles", roles)
+                .subject(user.getUsername())
+                .claim("roles", List.of(user.getRole().name()))
+                .claim("type", "ACCESS")
                 .issuedAt(now)
-                .expiration(expiry)
+                .expiration(new Date(now.getTime() + accessTokenValidTime))
                 .signWith(key)
                 .compact();
+    }
+
+    public String createRefreshToken(User user) {
+        Date now = new Date();
+
+        return Jwts.builder()
+                .subject(user.getUsername())
+                .claim("type", "REFRESH")
+                .issuedAt(now)
+                .expiration(new Date(now.getTime() + refreshTokenValidTime))
+                .signWith(key)
+                .compact();
+    }
+
+    public Long getRefreshTokenValidTime() {
+        return refreshTokenValidTime;
     }
 
     //토큰 유효성 검증

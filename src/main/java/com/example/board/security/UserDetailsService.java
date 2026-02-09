@@ -3,15 +3,14 @@ package com.example.board.security;
 import com.example.board.domain.User;
 import com.example.board.repository.UserRepository;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 @Service
-public class UserDetailService implements UserDetailsService {
+public class UserDetailsService implements org.springframework.security.core.userdetails.UserDetailsService {
     private UserRepository userRepository;
 
-    public UserDetailService(UserRepository userRepository) {
+    public UserDetailsService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
