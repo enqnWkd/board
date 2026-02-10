@@ -19,11 +19,6 @@ public class UserDetailsService implements org.springframework.security.core.use
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException(email));
 
-        //기본 UserDetails 구현체 만들기
-        return org.springframework.security.core.userdetails.User.builder()
-                .username(user.getUsername())
-                .password(user.getPassword())
-                .roles(user.getRole().name())
-                .build();
+        return new UserDetailsImpl(user);
     }
 }

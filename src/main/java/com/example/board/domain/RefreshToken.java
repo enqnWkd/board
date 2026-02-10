@@ -12,8 +12,8 @@ import java.time.LocalDateTime;
  */
 
 @Entity
-@Table(name = "refersh_token")
 @Getter
+@Table(name = "refresh_token")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RefreshToken {
 
@@ -22,7 +22,7 @@ public class RefreshToken {
     private Long id;
 
     //유저와 연관관계
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
@@ -33,17 +33,10 @@ public class RefreshToken {
     private LocalDateTime expiredAt;
 
     @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAt = LocalDateTime.now();
 
     public RefreshToken(User user) {
         this.user = user;
-    }
-
-    public RefreshToken(User user, String token, LocalDateTime expiredAt) {
-        this.user = user;
-        this.token = token;
-        this.expiredAt = expiredAt;
-        this.createdAt = LocalDateTime.now();
     }
 
     //토큰 갱신
@@ -52,4 +45,7 @@ public class RefreshToken {
         this.expiredAt = expiredAt;
     }
 
+    public boolean isExpired() {
+        return expiredAt.isBefore(LocalDateTime.now());
+    }
 }

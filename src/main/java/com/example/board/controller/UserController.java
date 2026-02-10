@@ -4,12 +4,15 @@ import com.example.board.dto.request.AddUserRequest;
 import com.example.board.dto.request.LoginRequest;
 import com.example.board.dto.response.TokenResponse;
 import com.example.board.security.jwt.JwtTokenProvider;
+import com.example.board.security.jwt.RefreshTokenService;
 import com.example.board.service.UserService;
+import jakarta.security.auth.message.AuthException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.antlr.v4.runtime.Token;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -18,23 +21,16 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/auth")
 public class UserController {
 
     private final AuthenticationManager authenticationManager;
-    private final JwtTokenProvider jwtTokenProvider;
+    private final RefreshTokenService refreshTokenService;
     private final UserService userService;
-
-    @PostMapping("/user")
-    public String signup(AddUserRequest request) {
-        userService.save(request); //회원가입(저장)
-        return "redirect:/login"; //회원가입 처리 후 로그인 페이지로 강제 이동
-    }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
@@ -47,11 +43,26 @@ public class UserController {
 
         TokenResponse tokenResponse = userService.login(authentication);
 
+        return buildTokenResponse(tokenResponse);
+    }
+
+    @PostMapping("/reissue")
+    public ResponseEntity<TokenResponse> reissue(
+            @CookieValue(name = "refreshToken", required = false) String refreshToken
+    ) {
+        if (refreshToken == null) {
+            return ResponseEntity.status(401).build();
+        }
+        TokenResponse tokenResponse = refreshTokenService.reissue(refreshToken);
+
+        return buildTokenResponse(tokenResponse);
+    }
+
+    private static ResponseEntity<TokenResponse> buildTokenResponse(TokenResponse tokenResponse) {
         ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", tokenResponse.getRefreshToken())
                 .httpOnly(true)
                 .secure(false)
                 .path("/")
-                .maxAge(7 * 24 * 60 * 60)
                 .sameSite("Strict")
                 .build();
 

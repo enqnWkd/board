@@ -49,7 +49,7 @@ public class WebSecurityConfig {
                 )
                 .authorizeHttpRequests(
                         auth -> auth
-                        .requestMatchers("/api/jwt/login", "/api/jwt/signup", "/h2-console/**").permitAll()
+                        .requestMatchers("/auth/login", "/auth/signup", "/auth/reissue", "/h2-console/**").permitAll()
                         .requestMatchers("/api/**").authenticated() //그외는 인증 필요
                         .anyRequest().permitAll()
                 )
