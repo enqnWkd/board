@@ -9,6 +9,8 @@ import com.example.board.repository.UserRepository;
 import com.example.board.security.UserDetailsImpl;
 import com.example.board.security.jwt.JwtTokenProvider;
 import com.example.board.security.jwt.RefreshTokenService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -43,12 +45,25 @@ public class UserService {
         if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
             throw new IllegalArgumentException("이미 존재하는 이메일입니다: " + dto.getEmail());
         }
-        return userRepository.save( //securityConfig에서 비밀번호 암호화 후 db에 저장
+        return userRepository.save(
                 User.builder()
                         .email(dto.getEmail())
                         .password(encoder.encode(dto.getPassword()))
                         .role(UserRole.USER)
                         .build()
         );
+    }
+
+    public void logout(User user, HttpServletResponse response) {
+
+        refreshTokenRepository.deleteByUser(user);
+
+        Cookie cookie = new Cookie("refreshToken", null);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true); // https면 true
+        cookie.setPath("/api/jwt/reissue"); // 발급할 때랑 동일
+        cookie.setMaxAge(0);
+
+        response.addCookie(cookie);
     }
 }

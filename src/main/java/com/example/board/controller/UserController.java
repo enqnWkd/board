@@ -3,14 +3,11 @@ package com.example.board.controller;
 import com.example.board.dto.request.AddUserRequest;
 import com.example.board.dto.request.LoginRequest;
 import com.example.board.dto.response.TokenResponse;
-import com.example.board.security.jwt.JwtTokenProvider;
+import com.example.board.security.UserDetailsImpl;
 import com.example.board.security.jwt.RefreshTokenService;
 import com.example.board.service.UserService;
-import jakarta.security.auth.message.AuthException;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.antlr.v4.runtime.Token;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -18,9 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
-import org.springframework.stereotype.Controller;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -31,6 +26,13 @@ public class UserController {
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenService refreshTokenService;
     private final UserService userService;
+
+    @PostMapping("/signup")
+    public ResponseEntity<String> signup(@RequestBody AddUserRequest request) {
+        userService.save(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body("회원가입이 완료되었습니다.");
+    }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
@@ -71,8 +73,13 @@ public class UserController {
                 .body(new TokenResponse(tokenResponse.getAccessToken(), null));
     }
 
+
     @PostMapping("/logout")
-    public ResponseEntity<String> logout() {
-        return ResponseEntity.ok("로그아웃 완료");
+    public ResponseEntity<String> logout(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            HttpServletResponse response
+    ) {
+        userService.logout(userDetails.getUser(), response);
+        return ResponseEntity.noContent().build();
     }
 }

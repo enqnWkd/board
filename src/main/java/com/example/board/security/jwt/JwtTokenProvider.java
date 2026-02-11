@@ -1,6 +1,8 @@
 package com.example.board.security.jwt;
 
 import com.example.board.domain.User;
+import com.example.board.exception.AuthException;
+import com.example.board.exception.Errorcode;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -62,15 +64,18 @@ public class JwtTokenProvider {
     }
 
     //토큰 유효성 검증
-    public boolean validateAccessToken(String token, String expectedType) {
-        try {
-            Jwts.parser()
-                    .verifyWith(key)
-                    .build()
-                    .parseSignedClaims(token);
-            return true;
-        } catch (git JwtException | IllegalArgumentException e) {
-            return false;
+    public void validateAccessToken(String token, String expectedType) {
+
+        Claims claims = Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        String type = claims.get("type", String.class);
+
+        if (!expectedType.equals(type)) {
+            throw new AuthException(Errorcode.INVALID_TOKEN);
         }
     }
 
@@ -78,7 +83,7 @@ public class JwtTokenProvider {
     public String resolveToken(HttpServletRequest request) {
         String bearer = request.getHeader("Authorization");
         if(bearer != null && bearer.startsWith("Bearer ")) {
-            return bearer.substring(7); //"Bearer " 이후 문자열만 추출
+            return bearer.substring(7);
         }
         return null;
     }

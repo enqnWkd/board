@@ -3,6 +3,9 @@ package com.example.board.security.jwt;
 import com.example.board.domain.RefreshToken;
 import com.example.board.domain.User;
 import com.example.board.dto.response.TokenResponse;
+import com.example.board.exception.AuthException;
+import com.example.board.exception.Errorcode;
+import com.example.board.exception.NotFoundException;
 import com.example.board.repository.RefreshTokenRepository;
 import com.example.board.repository.UserRepository;
 import io.jsonwebtoken.Claims;
@@ -48,21 +51,22 @@ public class RefreshTokenService {
         String type = claims.get("type", String.class);
 
         if (!"REFRESH".equals(type)) {
-            throw new JwtException("Invalid token type");
+            throw new AuthException(Errorcode.INVALID_TOKEN);
         }
 
         String email = claims.getSubject();
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException());
+                .orElseThrow(() -> new NotFoundException(Errorcode.USER_NOT_FOUND));
 
         //DB상의 rt와 요청 rt가 같은지 비교
-        RefreshToken storedRefreshToken = refreshTokenRepository.findByUser(user)
-                .orElseThrow(() -> new IllegalArgumentException());
+        RefreshToken storedRefreshToken = refreshTokenRepository
+                .findByUserAndToken(user, requestRt)
+                .orElseThrow(() -> new AuthException(Errorcode.INVALID_TOKEN));
 
         //RT 만료 검사
         if (storedRefreshToken.isExpired()) {
             refreshTokenRepository.delete(storedRefreshToken);
-            throw new IllegalArgumentException();
+            throw new AuthException(Errorcode.EXPIRED_TOKEN);
         }
 
         String newAccessToken = jwtTokenProvider.createAccessToken(user);

@@ -1,4 +1,14 @@
 package com.example.board.exception;
 
-public class NotFoundException {
+import lombok.Getter;
+
+@Getter
+public class NotFoundException extends RuntimeException {
+
+    private final Errorcode errorCode;
+
+    public NotFoundException(Errorcode errorCode) {
+        super(errorCode.getMessage());
+        this.errorCode = errorCode;
+    }
 }

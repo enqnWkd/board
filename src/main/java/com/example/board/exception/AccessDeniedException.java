@@ -1,8 +1,12 @@
 package com.example.board.exception;
 
-import java.nio.file.AccessDeniedException;
+import lombok.Getter;
 
-public class CustomAccessDeniedException extends AccessDeniedException {
-    
+@Getter
+public class AccessDeniedException extends RuntimeException {
+    private final Errorcode errorcode;
 
+    public AccessDeniedException (Errorcode errorcode) {
+        this.errorcode = errorcode;
+    }
 }

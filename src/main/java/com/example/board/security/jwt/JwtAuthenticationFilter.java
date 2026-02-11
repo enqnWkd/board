@@ -1,5 +1,8 @@
 package com.example.board.security.jwt;
 
+import com.example.board.exception.AuthException;
+import com.example.board.exception.Errorcode;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -28,14 +31,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (token != null) {
             try {
                 jwtTokenProvider.validateAccessToken(token, "ACCESS");
+
                 Authentication authentication =
                         jwtTokenProvider.parseAuthentication(token);
-
                 SecurityContextHolder.getContext()
                         .setAuthentication(authentication);
 
-            } catch (JwtException | IllegalArgumentException e) {
-                SecurityContextHolder.clearContext();
+            } catch (ExpiredJwtException e) {
+                throw new AuthException(Errorcode.EXPIRED_TOKEN);
+            } catch (JwtException e) {
+                throw new AuthException(Errorcode.INVALID_TOKEN);
             }
 
         }
