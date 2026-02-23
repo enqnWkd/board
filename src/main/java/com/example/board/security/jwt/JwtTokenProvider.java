@@ -26,8 +26,8 @@ import java.util.List;
 public class JwtTokenProvider {
 
     private final SecretKey key;
-    private long accessTokenValidTime = 1000L * 60;
-    private long refreshTokenValidTime = 1000L * 60 * 60;
+    private long accessTokenValidTime = 1000L * 60 * 3;
+    private long refreshTokenValidTime = 1000L * 60 * 5;
 
     public JwtTokenProvider(@Value("${jwt.secret}") String secretKey) {
         byte[] keyBytes = Decoders.BASE64URL.decode(secretKey);
@@ -38,7 +38,7 @@ public class JwtTokenProvider {
         Date now = new Date();
 
         return Jwts.builder()
-                .subject(user.getUsername())
+                .subject(user.getEmail())
                 .claim("roles", List.of(user.getRole().name()))
                 .claim("type", "ACCESS")
                 .issuedAt(now)
@@ -51,7 +51,7 @@ public class JwtTokenProvider {
         Date now = new Date();
 
         return Jwts.builder()
-                .subject(user.getUsername())
+                .subject(user.getEmail())
                 .claim("type", "REFRESH")
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + refreshTokenValidTime))

@@ -1,4 +1,4 @@
-package com.example.board.dto;
+package com.example.board.dto.request;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -11,10 +11,4 @@ public class AddCommentRequest {
     private String content;
     private Long articleId;
 
-//    @AllArgsConstructor
-    @Builder
-    public AddCommentRequest(String content, Long articleId) {
-        this.content = content;
-        this.articleId = articleId;
-    }
 }

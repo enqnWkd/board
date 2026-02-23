@@ -1,10 +1,12 @@
-package com.example.board.dto;
+package com.example.board.dto.response;
 
 import com.example.board.domain.Comment;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
 
+@AllArgsConstructor
 @Getter
 public class CommentResponse {
     private final Long id;
@@ -19,12 +21,5 @@ public class CommentResponse {
             comment.getUser().getEmail(),
             comment.getCreatedAt()
         );
-    }
-
-    public CommentResponse(Long id, String content, String author, LocalDateTime createAt) {
-        this.id = id;
-        this.content = content;
-        this.author = author;
-        this.createAt = createAt;
     }
 }

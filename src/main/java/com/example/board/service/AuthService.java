@@ -6,7 +6,7 @@ import com.example.board.dto.request.AddUserRequest;
 import com.example.board.dto.response.TokenResponse;
 import com.example.board.repository.RefreshTokenRepository;
 import com.example.board.repository.UserRepository;
-import com.example.board.security.UserDetailsImpl;
+import com.example.board.security.CustomUserDetails;
 import com.example.board.security.jwt.JwtTokenProvider;
 import com.example.board.security.jwt.RefreshTokenService;
 import jakarta.servlet.http.Cookie;
@@ -14,16 +14,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class UserService {
+public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -31,7 +28,7 @@ public class UserService {
     private final BCryptPasswordEncoder encoder;
 
     public TokenResponse login(Authentication authentication) {
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 
         User user = userDetails.getUser();
 

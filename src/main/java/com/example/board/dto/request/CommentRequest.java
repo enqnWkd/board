@@ -1,4 +1,4 @@
-package com.example.board.dto;
+package com.example.board.dto.request;
 
 import lombok.Getter;
 import org.springframework.stereotype.Service;

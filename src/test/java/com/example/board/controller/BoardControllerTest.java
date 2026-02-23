@@ -6,7 +6,7 @@ import com.example.board.domain.UserRole;
 import com.example.board.dto.AddArticleRequest;
 import com.example.board.dto.UpdateArticleRequest;
 import com.example.board.exception.ArticleNotFoundException;
-import com.example.board.repository.BlogRepository;
+import com.example.board.repository.BoardRepository;
 import com.example.board.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,7 +45,7 @@ class BoardControllerTest {
     private WebApplicationContext webApplicationContext;
 
     @Autowired
-    private BlogRepository blogRepository;
+    private BoardRepository blogRepository;
     @Autowired
     private UserRepository userRepository;
 

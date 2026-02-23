@@ -38,19 +38,11 @@ public class Comment {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    @LastModifiedDate
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
     @Builder
     public Comment(String content, User user, Article article) {
         this.content = content;
         this.user = user;
         this.article = article;
         this.createdAt = LocalDateTime.now();
-    }
-
-    public void updateContent(String content) {
-        this.content = content;
     }
 }

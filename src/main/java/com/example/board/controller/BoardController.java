@@ -1,86 +1,77 @@
 package com.example.board.controller;
 
 import com.example.board.domain.Article;
-import com.example.board.dto.AddArticleRequest;
-import com.example.board.dto.ArticleResponse;
-import com.example.board.dto.UpdateArticleRequest;
-import com.example.board.repository.UserRepository;
-import com.example.board.service.BlogService;
+import com.example.board.dto.request.AddArticleRequest;
+import com.example.board.dto.response.ArticleResponse;
+import com.example.board.dto.request.UpdateArticleRequest;
+import com.example.board.service.BoardService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@RequiredArgsConstructor
 @RestController
 public class BoardController {
-    private BlogService blogService;
-    private UserRepository userRepository;
+    private final BoardService boardService;
 
-    public BoardController(BlogService blogService, UserRepository userRepository) {
-        this.blogService = blogService;
-        this.userRepository = userRepository;
-    }
-
-    //글 저장
+    //게시글 등록
     @PostMapping("/api/articles")
-    public ResponseEntity<Article> addArticle(
+    public ResponseEntity<ArticleResponse> addArticle(
             @RequestBody AddArticleRequest request,
-            @AuthenticationPrincipal UserDetails userDetails
+            @AuthenticationPrincipal String email
     ) {
-        Article savedArticle = blogService.save(request, userDetails.getUsername());
+        ArticleResponse savedArticle = boardService.save(request, email);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(savedArticle);
     }
 
-    //전체 글 조회
+    //게시글 조회
     @GetMapping("/api/articles")
     public ResponseEntity<List<ArticleResponse>> findAllArticles() {
-        List<ArticleResponse> list = blogService.findAll()
+        List<ArticleResponse> list = boardService.findAll()
                 .stream().map(ArticleResponse::new)
                 .toList();
         return ResponseEntity.status(HttpStatus.OK)
                 .body(list);
     }
 
-    //특정 글 조회
     @GetMapping("/api/articles/{id}")
     public ResponseEntity<ArticleResponse> findArticle(@PathVariable("id") Long id) {
-        ArticleResponse articleResponse = blogService.findArticle(id);
+        ArticleResponse articleResponse = boardService.findArticle(id);
         return ResponseEntity.status(HttpStatus.OK)
                 .body(articleResponse);
-        //return ResponseEntity.ok(articleResponse);
     }
 
-    //전체 글 삭제
+    //게시글 삭제
     @DeleteMapping("/api/articles")
     public ResponseEntity<Void> deleteAllArticles() {
-        blogService.deleteAll();
+        boardService.deleteAll();
         return ResponseEntity.ok().build();
     }
 
-    //특정 글 삭제
     @DeleteMapping("/api/articles/{id}")
     public ResponseEntity<Void> deleteArticles(
             @PathVariable("id") Long id,
-            @AuthenticationPrincipal UserDetails userDetails
+            @AuthenticationPrincipal String email
     ) {
-        blogService.delete(id, userDetails.getUsername());
+        boardService.delete(id, email);
         return ResponseEntity.ok().build();
     }
 
-    //글 수정
+    //게시글 수정
     @Transactional
     @PutMapping("/api/articles/{id}")
     public ResponseEntity<ArticleResponse> updateArticle(
             @PathVariable("id") Long id,
             @RequestBody UpdateArticleRequest request,
-            @AuthenticationPrincipal UserDetails userDetails
+            @AuthenticationPrincipal String email
             ) {
-        Article updatedArticle = blogService.update(id, request,userDetails.getUsername());
+        Article updatedArticle = boardService.update(id, request, email);
         return ResponseEntity.ok(new ArticleResponse(updatedArticle));
     }
 }

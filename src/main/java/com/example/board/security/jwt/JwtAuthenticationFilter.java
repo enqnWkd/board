@@ -16,9 +16,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+@Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-
     private final JwtTokenProvider jwtTokenProvider;
 
     @Override
@@ -26,19 +26,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletRequest request, HttpServletResponse response, FilterChain filterChain
     ) throws ServletException, IOException {
 
+        String path = request.getRequestURI();
+
+        //재발급 요청이면 AT 검증 건너뛰기
+        if ("/auth/reissue".equals(path)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String token = jwtTokenProvider.resolveToken(request);
 
         if (token != null) {
             try {
                 jwtTokenProvider.validateAccessToken(token, "ACCESS");
-
                 Authentication authentication =
                         jwtTokenProvider.parseAuthentication(token);
                 SecurityContextHolder.getContext()
                         .setAuthentication(authentication);
 
             } catch (ExpiredJwtException e) {
-                throw new AuthException(Errorcode.EXPIRED_TOKEN);
+                if (!request.getRequestURI().startsWith("/auth")) {
+                    throw new AuthException(Errorcode.EXPIRED_TOKEN);
+                }
             } catch (JwtException e) {
                 throw new AuthException(Errorcode.INVALID_TOKEN);
             }
