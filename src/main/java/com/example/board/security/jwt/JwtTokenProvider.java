@@ -59,10 +59,6 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public Long getRefreshTokenValidTime() {
-        return refreshTokenValidTime;
-    }
-
     //토큰 유효성 검증
     public void validateAccessToken(String token, String expectedType) {
 

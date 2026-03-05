@@ -20,8 +20,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.stereotype.Component;
 
-import static org.springframework.boot.autoconfigure.security.servlet.PathRequest.toH2Console;
-
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -41,7 +39,6 @@ public class WebSecurityConfig {
     public WebSecurityCustomizer configure() {
         return web -> web
                 .ignoring()
-                .requestMatchers(toH2Console())
                 .requestMatchers("/static/**");
     }
 
@@ -54,7 +51,7 @@ public class WebSecurityConfig {
                 )
                 .authorizeHttpRequests(
                         auth -> auth
-                        .requestMatchers("/auth/login", "/auth/signup", "/auth/reissue", "/h2-console/**").permitAll()
+                        .requestMatchers("/auth/login", "/auth/signup", "/auth/reissue").permitAll()
                         .requestMatchers("/api/**").authenticated() //그외는 인증 필요
                         .anyRequest().permitAll()
                 )

@@ -4,7 +4,6 @@ import com.example.board.domain.User;
 import com.example.board.domain.UserRole;
 import com.example.board.dto.request.AddUserRequest;
 import com.example.board.dto.response.TokenResponse;
-import com.example.board.repository.RefreshTokenRepository;
 import com.example.board.repository.UserRepository;
 import com.example.board.security.CustomUserDetails;
 import com.example.board.security.jwt.JwtTokenProvider;
@@ -13,6 +12,9 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,7 +25,8 @@ import org.springframework.stereotype.Service;
 public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
-    private final RefreshTokenRepository refreshTokenRepository;
+    private final RedisTokenService redisTokenService;
+    private final StringRedisTemplate redisTemplate;
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder encoder;
 
@@ -34,6 +37,8 @@ public class AuthService {
 
         String accessToken = jwtTokenProvider.createAccessToken(user);
         String refreshToken = refreshTokenService.createRefreshToken(user);
+
+        redisTokenService.saveRefreshToken(refreshToken, user.getId());
 
         return new TokenResponse(accessToken, refreshToken);
     }
@@ -53,14 +58,17 @@ public class AuthService {
 
     public void logout(User user, HttpServletResponse response) {
 
-        refreshTokenRepository.deleteByUser(user);
+        String key = "refresh:"+ user.getId();
+        redisTemplate.delete(key);
 
-        Cookie cookie = new Cookie("refreshToken", null);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true); // https면 true
-        cookie.setPath("/api/jwt/reissue"); // 발급할 때랑 동일
-        cookie.setMaxAge(0);
+        ResponseCookie deleteCookie = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(false)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(0)
+                .build();
 
-        response.addCookie(cookie);
+        response.addHeader(HttpHeaders.SET_COOKIE, deleteCookie.toString());
     }
 }

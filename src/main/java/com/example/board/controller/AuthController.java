@@ -18,6 +18,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/auth")
@@ -63,9 +65,10 @@ public class AuthController {
     private static ResponseEntity<TokenResponse> buildTokenResponse(TokenResponse tokenResponse) {
         ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", tokenResponse.getRefreshToken())
                 .httpOnly(true)
-                .secure(false)
+                .secure(false) //로컬 http
+                .sameSite("Lax")
                 .path("/")
-                .sameSite("Strict")
+                .maxAge(Duration.ofDays(7))
                 .build();
 
         return ResponseEntity.ok()

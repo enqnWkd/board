@@ -1,22 +1,21 @@
 package com.example.board.security.jwt;
 
-import com.example.board.domain.RefreshToken;
 import com.example.board.domain.User;
 import com.example.board.dto.response.TokenResponse;
 import com.example.board.exception.AuthException;
 import com.example.board.exception.Errorcode;
 import com.example.board.exception.NotFoundException;
-import com.example.board.repository.RefreshTokenRepository;
 import com.example.board.repository.UserRepository;
+import com.example.board.service.RedisTokenService;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cglib.core.Local;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -24,55 +23,57 @@ import java.time.LocalDateTime;
 public class RefreshTokenService {
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
+    private final StringRedisTemplate redisTemplate;
+    private final RedisTokenService redisTokenService;
+
 
     public String createRefreshToken(User user) {
 
         String token = jwtTokenProvider.createRefreshToken(user);
 
-        RefreshToken rt = refreshTokenRepository.findByUser(user)
-                        .orElse(new RefreshToken(user));
+        String key = "refresh:" + user.getId();
 
-        rt.updateToken(token, getNewExpiredAt());
-        refreshTokenRepository.save(rt);
-
+        redisTemplate.opsForValue()
+                .set(key, token, 7, TimeUnit.DAYS);
         return token;
-    }
-
-    private LocalDateTime getNewExpiredAt() {
-        return LocalDateTime.now()
-                .plus(Duration.ofMillis(jwtTokenProvider.getRefreshTokenValidTime()));
     }
 
     public TokenResponse reissue(String requestRt) {
 
         Claims claims = jwtTokenProvider.parseClaimsAllowExpired(requestRt);
-        String type = claims.get("type", String.class);
 
-        if (!"REFRESH".equals(type)) {
+        if (!"REFRESH".equals(claims.get("type", String.class))) {
             throw new AuthException(Errorcode.INVALID_TOKEN);
         }
 
-        String email = claims.getSubject();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new NotFoundException(Errorcode.USER_NOT_FOUND));
+        String userId = claims.getSubject();
+        String key = "refresh:" + userId;
+        String stored = redisTemplate.opsForValue().get(key);
 
-        //DB상의 rt와 요청 rt가 같은지 비교
-        RefreshToken storedRefreshToken = refreshTokenRepository
-                .findByUserAndToken(user, requestRt)
-                .orElseThrow(() -> new AuthException(Errorcode.INVALID_TOKEN));
-
-        //RT 만료 검사
-        if (storedRefreshToken.isExpired()) {
-            refreshTokenRepository.delete(storedRefreshToken);
-            throw new AuthException(Errorcode.EXPIRED_TOKEN);
+        if (stored == null) {
+            throw new AuthException(Errorcode.INVALID_TOKEN);
         }
+
+        if (!stored.equals(requestRt)) {
+            //재사용 탐지 대응
+            redisTemplate.delete(key);
+            throw new AuthException(Errorcode.INVALID_TOKEN);
+        }
+
+        Boolean deleted = redisTemplate.delete(key);
+
+        if (!deleted) {
+            throw new AuthException(Errorcode.INVALID_TOKEN);
+        }
+
+        User user = userRepository.findById(Long.valueOf(userId))
+                .orElseThrow(() -> new NotFoundException(Errorcode.USER_NOT_FOUND));
 
         String newAccessToken = jwtTokenProvider.createAccessToken(user);
         String newRefreshToken = jwtTokenProvider.createRefreshToken(user);
 
-        storedRefreshToken.updateToken(newRefreshToken, getNewExpiredAt());
+        redisTokenService.saveRefreshToken(newRefreshToken, user.getId());
 
         return new TokenResponse(newAccessToken, newRefreshToken);
     }

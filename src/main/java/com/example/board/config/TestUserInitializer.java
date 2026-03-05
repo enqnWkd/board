@@ -21,6 +21,7 @@ public class TestUserInitializer {
 
     @Bean
     public CommandLineRunner initUsersAndArticles() {
+
         return args -> {
             if (userRepository.findByEmail("a@a.com").isEmpty()) {
                 User user1 = new User("a@a.com", passwordEncoder.encode("a"), UserRole.USER);
