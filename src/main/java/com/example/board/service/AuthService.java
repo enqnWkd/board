@@ -40,6 +40,7 @@ public class AuthService {
 
         redisTokenService.saveRefreshToken(refreshToken, user.getId());
 
+        System.out.println("AuthService.login");
         return new TokenResponse(accessToken, refreshToken);
     }
 

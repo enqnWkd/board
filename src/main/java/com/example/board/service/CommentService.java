@@ -27,11 +27,11 @@ public class CommentService {
     private final UserRepository userRepository;
 
     @Transactional
-    public Comment save(Long articleId, AddCommentRequest request, String email) {
+    public Comment save(Long articleId, AddCommentRequest request, Long userId) {
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
 
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException(Errorcode.USER_NOT_FOUND));
 
         Comment comment = Comment.builder()
@@ -52,11 +52,11 @@ public class CommentService {
                 .collect(Collectors.toList());
     }
 
-    public void deleteComment(Long commentId, String email) {
+    public void deleteComment(Long commentId, Long userId) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new NotFoundException(Errorcode.COMMENT_NOT_FOUND));
 
-        if (!comment.getUser().getEmail().equals(email)) {
+        if (!comment.getUser().getId().equals(userId)) {
             throw new AccessDeniedException(Errorcode.ACCESS_DENIED);
         }
 

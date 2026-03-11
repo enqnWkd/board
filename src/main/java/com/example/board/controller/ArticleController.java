@@ -4,6 +4,7 @@ import com.example.board.domain.Article;
 import com.example.board.dto.request.AddArticleRequest;
 import com.example.board.dto.response.ArticleResponse;
 import com.example.board.dto.request.UpdateArticleRequest;
+import com.example.board.security.CustomUserDetails;
 import com.example.board.service.ArticleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,9 +24,9 @@ public class ArticleController {
     @PostMapping("/api/articles")
     public ResponseEntity<ArticleResponse> addArticle(
             @RequestBody AddArticleRequest request,
-            @AuthenticationPrincipal String email
-    ) {
-        ArticleResponse savedArticle = articleService.save(request, email);
+            @AuthenticationPrincipal CustomUserDetails userDetails
+            ) {
+        ArticleResponse savedArticle = articleService.save(request, userDetails.getUserId());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(savedArticle);
     }
@@ -53,24 +54,24 @@ public class ArticleController {
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping("/api/articles/{id}")
+    @DeleteMapping("/api/articles/{articleId}")
     public ResponseEntity<Void> deleteArticles(
-            @PathVariable("id") Long id,
-            @AuthenticationPrincipal String email
+            @PathVariable("articleId") Long articleId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        articleService.delete(id, email);
+        articleService.delete(articleId, userDetails.getUserId());
         return ResponseEntity.ok().build();
     }
 
     //게시글 수정
     @Transactional
-    @PutMapping("/api/articles/{id}")
+    @PutMapping("/api/articles/{articleId}")
     public ResponseEntity<ArticleResponse> updateArticle(
-            @PathVariable("id") Long id,
+            @PathVariable("articleId") Long articleId,
             @RequestBody UpdateArticleRequest request,
-            @AuthenticationPrincipal String email
+            @AuthenticationPrincipal CustomUserDetails userDetails
             ) {
-        ArticleResponse updatedArticle = articleService.update(id, request, email);
+        ArticleResponse updatedArticle = articleService.update(articleId, request, userDetails.getUserId());
         return ResponseEntity.ok(updatedArticle);
     }
 }

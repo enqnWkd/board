@@ -24,8 +24,8 @@ public class ArticleService {
     private final UserRepository userRepository;
     private final ArticleLikeRepository articleLikeRepository;
 
-    public ArticleResponse save(AddArticleRequest request, String email) {
-        User user = userRepository.findByEmail(email)
+    public ArticleResponse save(AddArticleRequest request, Long userId) {
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException(Errorcode.USER_NOT_FOUND));
 
         Article article = request.toEntity();
@@ -60,23 +60,26 @@ public class ArticleService {
         articleRepository.deleteAll();
     }
 
-    public void delete(Long id, String email) {
-
-        Article article = articleRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
-
-        if (!article.getUser().getId().equals(email)) {
-            throw new AccessDeniedException(Errorcode.ACCESS_DENIED);
-        }
-        articleRepository.deleteById(id);
-    }
-
-    public ArticleResponse update(Long articleId, UpdateArticleRequest request, String email) {
+    public void delete(Long articleId, Long userId) {
 
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
 
-        if (!article.getUser().getEmail().equals(email)) {
+        if (!article.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException(Errorcode.ACCESS_DENIED);
+        }
+
+        articleLikeRepository.deleteByArticleId(articleId);
+
+        articleRepository.deleteById(articleId);
+    }
+
+    public ArticleResponse update(Long articleId, UpdateArticleRequest request, Long userId) {
+
+        Article article = articleRepository.findById(articleId)
+                .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
+
+        if (!article.getUser().getId().equals(userId)) {
             throw new AccessDeniedException(Errorcode.ACCESS_DENIED);
         }
 

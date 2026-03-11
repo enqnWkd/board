@@ -18,9 +18,9 @@ public class ArticleLikeController {
     private final ArticleLikeService articleLikeService;
 
     @PostMapping("/{articleId}/like")
-    public ResponseEntity<?> toggleLike(@PathVariable Long articleId, @AuthenticationPrincipal String email) {
+    public ResponseEntity<?> toggleLike(@PathVariable Long articleId, @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        boolean liked = articleLikeService.toggleLike(articleId, email);
+        boolean liked = articleLikeService.toggleLike(articleId, userDetails.getUserId());
 
         return ResponseEntity.ok(liked);
     }

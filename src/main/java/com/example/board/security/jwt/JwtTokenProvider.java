@@ -3,6 +3,10 @@ package com.example.board.security.jwt;
 import com.example.board.domain.User;
 import com.example.board.exception.AuthException;
 import com.example.board.exception.Errorcode;
+import com.example.board.exception.NotFoundException;
+import com.example.board.repository.UserRepository;
+import com.example.board.security.CustomUserDetails;
+import com.example.board.security.CustomUserDetailsService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -10,11 +14,13 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -26,19 +32,23 @@ import java.util.List;
 public class JwtTokenProvider {
 
     private final SecretKey key;
+    private final CustomUserDetailsService customUserDetailsService;
+    private final UserRepository userRepository;
     private long accessTokenValidTime = 1000L * 60 * 3;
     private long refreshTokenValidTime = 1000L * 60 * 5;
 
-    public JwtTokenProvider(@Value("${jwt.secret}") String secretKey) {
+    public JwtTokenProvider(@Value("${jwt.secret}") String secretKey, CustomUserDetailsService customUserDetailsService, UserRepository userRepository) {
         byte[] keyBytes = Decoders.BASE64URL.decode(secretKey);
         this.key = Keys.hmacShaKeyFor(keyBytes);
+        this.customUserDetailsService = customUserDetailsService;
+        this.userRepository = userRepository;
     }
 
     public String createAccessToken(User user) {
         Date now = new Date();
 
         return Jwts.builder()
-                .subject(user.getEmail())
+                .subject(String.valueOf(user.getId()))
                 .claim("roles", List.of(user.getRole().name()))
                 .claim("type", "ACCESS")
                 .issuedAt(now)
@@ -51,7 +61,7 @@ public class JwtTokenProvider {
         Date now = new Date();
 
         return Jwts.builder()
-                .subject(user.getEmail())
+                .subject(String.valueOf(user.getId()))
                 .claim("type", "REFRESH")
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + refreshTokenValidTime))
@@ -87,7 +97,12 @@ public class JwtTokenProvider {
     public Authentication parseAuthentication(String token) {
         Claims claims = parseClaims(token);
 
-        String username = claims.getSubject();
+        Long userId = Long.parseLong(claims.getSubject());
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(Errorcode.USER_NOT_FOUND));
+
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+
         List<String> roles = claims.get("roles", List.class);
 
         List<GrantedAuthority> authorities = roles.stream()
@@ -95,7 +110,9 @@ public class JwtTokenProvider {
                 .toList();
 
         return new UsernamePasswordAuthenticationToken(
-                username, null, authorities
+                userDetails,
+                null,
+                authorities
         );
     }
 

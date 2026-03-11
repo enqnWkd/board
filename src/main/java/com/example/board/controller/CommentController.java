@@ -3,6 +3,7 @@ package com.example.board.controller;
 import com.example.board.domain.Comment;
 import com.example.board.dto.request.AddCommentRequest;
 import com.example.board.dto.response.CommentResponse;
+import com.example.board.security.CustomUserDetails;
 import com.example.board.service.CommentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,9 +23,9 @@ public class CommentController {
     public ResponseEntity<CommentResponse> addComment(
             @PathVariable Long articleId,
             @RequestBody AddCommentRequest request,
-            @AuthenticationPrincipal String email
-    ) {
-        Comment savedComment = commentService.save(articleId, request, email);
+            @AuthenticationPrincipal CustomUserDetails userDetails
+            ) {
+        Comment savedComment = commentService.save(articleId, request, userDetails.getUserId());
         return ResponseEntity.status(HttpStatus.CREATED).body(CommentResponse.from(savedComment));
     }
 
@@ -41,9 +42,9 @@ public class CommentController {
     @DeleteMapping("/api/comments/{commentId}")
     public ResponseEntity<CommentResponse> deleteComment(
             @PathVariable Long commentId,
-            @AuthenticationPrincipal String email
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        commentService.deleteComment(commentId, email);
+        commentService.deleteComment(commentId, userDetails.getUserId());
 
         return ResponseEntity.ok().build();
     }

@@ -23,12 +23,12 @@ public class ArticleLikeService {
     private final UserRepository userRepository;
 
     @Transactional
-    public boolean toggleLike(Long articleId, String email) {
+    public boolean toggleLike(Long articleId, Long userId) {
 
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
 
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException(Errorcode.USER_NOT_FOUND));
 
         Optional<ArticleLike> like = articleLikeRepository.findByUserAndArticle(user, article);

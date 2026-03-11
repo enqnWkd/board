@@ -39,14 +39,18 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
 
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            request.getEmail(), request.getPassword()
-                    )
-            );
+        System.out.println("AuthController.login1");
 
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(), request.getPassword()
+                )
+        );
+
+        System.out.println("AuthController.login2");
         TokenResponse tokenResponse = userService.login(authentication);
 
+        System.out.println("AuthController.login3");
         return buildTokenResponse(tokenResponse);
     }
 
