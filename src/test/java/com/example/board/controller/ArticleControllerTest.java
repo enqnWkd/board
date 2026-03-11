@@ -1,16 +1,14 @@
-package com.example.blog.controller;
+package com.example.board.controller;
 
-import com.example.blog.domain.Article;
-import com.example.blog.domain.User;
-import com.example.blog.domain.UserRole;
-import com.example.blog.dto.AddArticleRequest;
-import com.example.blog.dto.UpdateArticleRequest;
-import com.example.blog.exception.ArticleNotFoundException;
-import com.example.blog.repository.BlogRepository;
-import com.example.blog.repository.UserRepository;
-import com.example.blog.service.UserDetailsImpl;
+import com.example.board.domain.Article;
+import com.example.board.domain.User;
+import com.example.board.domain.UserRole;
+import com.example.board.dto.AddArticleRequest;
+import com.example.board.dto.UpdateArticleRequest;
+import com.example.board.exception.ArticleNotFoundException;
+import com.example.board.repository.ArticleRepository;
+import com.example.board.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,22 +16,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MockMvcBuilder;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.lang.runtime.ObjectMethods;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -41,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-class BlogControllerTest {
+class ArticleControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -53,7 +45,7 @@ class BlogControllerTest {
     private WebApplicationContext webApplicationContext;
 
     @Autowired
-    private BlogRepository blogRepository;
+    private ArticleRepository blogRepository;
     @Autowired
     private UserRepository userRepository;
 

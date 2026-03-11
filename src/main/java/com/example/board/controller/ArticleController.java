@@ -4,7 +4,7 @@ import com.example.board.domain.Article;
 import com.example.board.dto.request.AddArticleRequest;
 import com.example.board.dto.response.ArticleResponse;
 import com.example.board.dto.request.UpdateArticleRequest;
-import com.example.board.service.BoardService;
+import com.example.board.service.ArticleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,8 +16,8 @@ import java.util.List;
 
 @RequiredArgsConstructor
 @RestController
-public class BoardController {
-    private final BoardService boardService;
+public class ArticleController {
+    private final ArticleService articleService;
 
     //게시글 등록
     @PostMapping("/api/articles")
@@ -25,7 +25,7 @@ public class BoardController {
             @RequestBody AddArticleRequest request,
             @AuthenticationPrincipal String email
     ) {
-        ArticleResponse savedArticle = boardService.save(request, email);
+        ArticleResponse savedArticle = articleService.save(request, email);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(savedArticle);
     }
@@ -33,16 +33,15 @@ public class BoardController {
     //게시글 조회
     @GetMapping("/api/articles")
     public ResponseEntity<List<ArticleResponse>> findAllArticles() {
-        List<ArticleResponse> list = boardService.findAll()
-                .stream().map(ArticleResponse::new)
-                .toList();
+        List<ArticleResponse> list = articleService.findAll();
+
         return ResponseEntity.status(HttpStatus.OK)
                 .body(list);
     }
 
     @GetMapping("/api/articles/{id}")
     public ResponseEntity<ArticleResponse> findArticle(@PathVariable("id") Long id) {
-        ArticleResponse articleResponse = boardService.findArticle(id);
+        ArticleResponse articleResponse = articleService.findArticle(id);
         return ResponseEntity.status(HttpStatus.OK)
                 .body(articleResponse);
     }
@@ -50,7 +49,7 @@ public class BoardController {
     //게시글 삭제
     @DeleteMapping("/api/articles")
     public ResponseEntity<Void> deleteAllArticles() {
-        boardService.deleteAll();
+        articleService.deleteAll();
         return ResponseEntity.ok().build();
     }
 
@@ -59,7 +58,7 @@ public class BoardController {
             @PathVariable("id") Long id,
             @AuthenticationPrincipal String email
     ) {
-        boardService.delete(id, email);
+        articleService.delete(id, email);
         return ResponseEntity.ok().build();
     }
 
@@ -71,7 +70,7 @@ public class BoardController {
             @RequestBody UpdateArticleRequest request,
             @AuthenticationPrincipal String email
             ) {
-        Article updatedArticle = boardService.update(id, request, email);
-        return ResponseEntity.ok(new ArticleResponse(updatedArticle));
+        ArticleResponse updatedArticle = articleService.update(id, request, email);
+        return ResponseEntity.ok(updatedArticle);
     }
 }

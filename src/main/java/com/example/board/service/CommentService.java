@@ -8,7 +8,7 @@ import com.example.board.dto.response.CommentResponse;
 import com.example.board.exception.AccessDeniedException;
 import com.example.board.exception.Errorcode;
 import com.example.board.exception.NotFoundException;
-import com.example.board.repository.BoardRepository;
+import com.example.board.repository.ArticleRepository;
 import com.example.board.repository.CommentRepository;
 import com.example.board.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,12 +23,12 @@ import java.util.stream.Collectors;
 public class CommentService {
 
     private final CommentRepository commentRepository;
-    private final BoardRepository boardRepository;
+    private final ArticleRepository articleRepository;
     private final UserRepository userRepository;
 
     @Transactional
     public Comment save(Long articleId, AddCommentRequest request, String email) {
-        Article article = boardRepository.findById(articleId)
+        Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
 
         User user = userRepository.findByEmail(email)
@@ -44,7 +44,7 @@ public class CommentService {
     }
 
     public List<CommentResponse> getCommentsByArticle(Long articleId) {
-        Article article = boardRepository.findById(articleId)
+        Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
 
         return commentRepository.findByArticle(article).stream()

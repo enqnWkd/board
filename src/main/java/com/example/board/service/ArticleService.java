@@ -6,8 +6,10 @@ import com.example.board.dto.request.AddArticleRequest;
 import com.example.board.dto.response.ArticleResponse;
 import com.example.board.dto.request.UpdateArticleRequest;
 import com.example.board.exception.*;
-import com.example.board.repository.BoardRepository;
+import com.example.board.repository.ArticleLikeRepository;
+import com.example.board.repository.ArticleRepository;
 import com.example.board.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,15 +17,12 @@ import java.util.List;
 
 @Service
 @Transactional
-public class BoardService {
+@RequiredArgsConstructor
+public class ArticleService {
 
-    private final BoardRepository boardRepository;
+    private final ArticleRepository articleRepository;
     private final UserRepository userRepository;
-
-    public BoardService(BoardRepository boardRepository, UserRepository userRepository) {
-        this.boardRepository = boardRepository;
-        this.userRepository = userRepository;
-    }
+    private final ArticleLikeRepository articleLikeRepository;
 
     public ArticleResponse save(AddArticleRequest request, String email) {
         User user = userRepository.findByEmail(email)
@@ -31,57 +30,60 @@ public class BoardService {
 
         Article article = request.toEntity();
         article.setUser(user);
-        boardRepository.save(article);
+        articleRepository.save(article);
 
-        return ArticleResponse.from(article);
+        return ArticleResponse.from(article, 0L);
     }
 
-    public List<Article> findAll() {
-        return boardRepository.findAll();
+    public List<ArticleResponse> findAll() {
+
+        List<Article> articles = articleRepository.findAll();
+
+        return articles.stream()
+                .map(article -> {
+                    long likeCount = articleLikeRepository.countByArticleId(article.getId());
+                    return new ArticleResponse(article, likeCount);
+                })
+                .toList();
     }
 
-    public ArticleResponse findArticle(Long id) {
-        Article article = boardRepository.findById(id)
+    public ArticleResponse findArticle(Long articleId) {
+        Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
-        return new ArticleResponse(article);
-    }
 
-    public Article findById(Long id) {
-        return boardRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
+        Long likeCount = articleLikeRepository.countByArticleId(articleId);
+
+        return ArticleResponse.from(article, likeCount);
     }
 
     public void deleteAll() {
-        boardRepository.deleteAll();
+        articleRepository.deleteAll();
     }
 
     public void delete(Long id, String email) {
 
-        Article article = boardRepository.findById(id)
+        Article article = articleRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new NotFoundException(Errorcode.USER_NOT_FOUND));
-
-        if (!article.getUser().getId().equals(user.getId())) {
+        if (!article.getUser().getId().equals(email)) {
             throw new AccessDeniedException(Errorcode.ACCESS_DENIED);
         }
-        boardRepository.deleteById(id);
+        articleRepository.deleteById(id);
     }
 
-    public Article update(Long id, UpdateArticleRequest request, String email) {
+    public ArticleResponse update(Long articleId, UpdateArticleRequest request, String email) {
 
-        Article article = boardRepository.findById(id)
+        Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
-
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new NotFoundException(Errorcode.USER_NOT_FOUND));
 
         if (!article.getUser().getEmail().equals(email)) {
             throw new AccessDeniedException(Errorcode.ACCESS_DENIED);
         }
 
         article.update(request.getTitle(), request.getContent());
-        return article;
+
+        Long likeCount = articleLikeRepository.countByArticleId(articleId);
+
+        return ArticleResponse.from(article, likeCount);
     }
 }
