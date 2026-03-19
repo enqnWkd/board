@@ -8,7 +8,6 @@ import com.example.board.repository.UserRepository;
 import com.example.board.security.CustomUserDetails;
 import com.example.board.security.jwt.JwtTokenProvider;
 import com.example.board.security.jwt.RefreshTokenService;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +39,6 @@ public class AuthService {
 
         redisTokenService.saveRefreshToken(refreshToken, user.getId());
 
-        System.out.println("AuthService.login");
         return new TokenResponse(accessToken, refreshToken);
     }
 

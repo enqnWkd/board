@@ -3,9 +3,10 @@ package com.example.board.controller;
 import com.example.board.domain.Article;
 import com.example.board.domain.User;
 import com.example.board.domain.UserRole;
-import com.example.board.dto.AddArticleRequest;
-import com.example.board.dto.UpdateArticleRequest;
-import com.example.board.exception.ArticleNotFoundException;
+import com.example.board.dto.request.AddArticleRequest;
+import com.example.board.dto.request.UpdateArticleRequest;
+import com.example.board.exception.AuthException;
+import com.example.board.exception.Errorcode;
 import com.example.board.repository.ArticleRepository;
 import com.example.board.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -53,7 +54,7 @@ class ArticleControllerTest {
     public void mockMvcSetUp() {
         this.mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
         blogRepository.deleteAll();
-        userRepository.save(new User("test@example.com", "encoded-password", UserRole.ROLE));
+        userRepository.save(new User("test@example.com", "encoded-password", UserRole.ADMIN));
     }
 
     @DisplayName("블로그 글 추가 성공")
@@ -181,7 +182,7 @@ class ArticleControllerTest {
         result.andExpect(status().isOk());
 
         Article afterModifiedArticle = blogRepository.findById(article.getId())
-                .orElseThrow(() -> new ArticleNotFoundException("해당 글이 없습니다."));
+                .orElseThrow(() -> new AuthException(Errorcode.ARTICLE_NOT_FOUND));
         assertThat(afterModifiedArticle.getTitle()).isEqualTo(modifiedTitle);
         assertThat(afterModifiedArticle.getContent()).isEqualTo(modifiedContent);
 

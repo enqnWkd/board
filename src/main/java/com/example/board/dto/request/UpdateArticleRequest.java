@@ -1,6 +1,5 @@
 package com.example.board.dto.request;
 
-
 public class UpdateArticleRequest {
 
     private String title;

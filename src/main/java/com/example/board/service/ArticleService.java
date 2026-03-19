@@ -10,10 +10,10 @@ import com.example.board.repository.ArticleLikeRepository;
 import com.example.board.repository.ArticleRepository;
 import com.example.board.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @Transactional
@@ -35,16 +35,9 @@ public class ArticleService {
         return ArticleResponse.from(article, 0L);
     }
 
-    public List<ArticleResponse> findAll() {
-
-        List<Article> articles = articleRepository.findAll();
-
-        return articles.stream()
-                .map(article -> {
-                    long likeCount = articleLikeRepository.countByArticleId(article.getId());
-                    return new ArticleResponse(article, likeCount);
-                })
-                .toList();
+    public Page<ArticleResponse> findAll(Pageable pageable) {
+        return articleRepository.findAll(pageable)
+                .map(article -> new ArticleResponse(article, articleLikeRepository.countByArticleId(article.getId())));
     }
 
     public ArticleResponse findArticle(Long articleId) {

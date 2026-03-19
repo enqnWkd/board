@@ -1,19 +1,20 @@
 package com.example.board.controller;
 
-import com.example.board.domain.Article;
 import com.example.board.dto.request.AddArticleRequest;
 import com.example.board.dto.response.ArticleResponse;
 import com.example.board.dto.request.UpdateArticleRequest;
 import com.example.board.security.CustomUserDetails;
 import com.example.board.service.ArticleService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RequiredArgsConstructor
 @RestController
@@ -33,11 +34,10 @@ public class ArticleController {
 
     //게시글 조회
     @GetMapping("/api/articles")
-    public ResponseEntity<List<ArticleResponse>> findAllArticles() {
-        List<ArticleResponse> list = articleService.findAll();
-
-        return ResponseEntity.status(HttpStatus.OK)
-                .body(list);
+    public Page<ArticleResponse> findAllArticles(
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+        return articleService.findAll(pageable);
     }
 
     @GetMapping("/api/articles/{id}")

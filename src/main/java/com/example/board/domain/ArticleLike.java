@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 public class ArticleLike {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
