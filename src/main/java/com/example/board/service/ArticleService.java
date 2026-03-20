@@ -36,8 +36,11 @@ public class ArticleService {
     }
 
     public Page<ArticleResponse> findAll(Pageable pageable) {
-        return articleRepository.findAll(pageable)
-                .map(article -> new ArticleResponse(article, articleLikeRepository.countByArticleId(article.getId())));
+        return articleRepository.findAllWithUser(pageable)
+                .map(article -> new ArticleResponse(
+                        article,
+                        articleLikeRepository.countByArticleId(article.getId())
+                ));
     }
 
     public ArticleResponse findArticle(Long articleId) {
