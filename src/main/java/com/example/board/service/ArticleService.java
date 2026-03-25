@@ -85,4 +85,14 @@ public class ArticleService {
 
         return ArticleResponse.from(article, likeCount);
     }
+
+    public Page<ArticleResponse> search(String keyword, Pageable pageable) {
+
+        keyword = keyword.trim();
+        return articleRepository.search(keyword, pageable)
+                .map(article -> new ArticleResponse(
+                        article,
+                        articleLikeRepository.countByArticleId(article.getId())
+                ));
+    }
 }

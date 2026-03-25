@@ -8,7 +8,6 @@ import com.example.board.service.ArticleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,11 +17,12 @@ import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
 @RestController
+@RequestMapping("/api")
 public class ArticleController {
     private final ArticleService articleService;
 
     //게시글 등록
-    @PostMapping("/api/articles")
+    @PostMapping("/articles")
     public ResponseEntity<ArticleResponse> addArticle(
             @RequestBody AddArticleRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -32,15 +32,18 @@ public class ArticleController {
                 .body(savedArticle);
     }
 
-    //게시글 조회
-    @GetMapping("/api/articles")
-    public Page<ArticleResponse> findAllArticles(
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
-            Pageable pageable) {
-        return articleService.findAll(pageable);
+    @GetMapping("/articles")
+    public Page<ArticleResponse> search(
+            @RequestParam(required = false) String keyword,
+            @PageableDefault(size = 10) Pageable pageable
+    ) {
+        if (keyword == null || keyword.isBlank()) {
+            return articleService.findAll(pageable);
+        }
+        return articleService.search(keyword, pageable);
     }
 
-    @GetMapping("/api/articles/{id}")
+    @GetMapping("/articles/{id}")
     public ResponseEntity<ArticleResponse> findArticle(@PathVariable("id") Long id) {
         ArticleResponse articleResponse = articleService.findArticle(id);
         return ResponseEntity.status(HttpStatus.OK)
@@ -48,13 +51,13 @@ public class ArticleController {
     }
 
     //게시글 삭제
-    @DeleteMapping("/api/articles")
+    @DeleteMapping("/articles")
     public ResponseEntity<Void> deleteAllArticles() {
         articleService.deleteAll();
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping("/api/articles/{articleId}")
+    @DeleteMapping("/articles/{articleId}")
     public ResponseEntity<Void> deleteArticles(
             @PathVariable("articleId") Long articleId,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -65,7 +68,7 @@ public class ArticleController {
 
     //게시글 수정
     @Transactional
-    @PutMapping("/api/articles/{articleId}")
+    @PutMapping("/articles/{articleId}")
     public ResponseEntity<ArticleResponse> updateArticle(
             @PathVariable("articleId") Long articleId,
             @RequestBody UpdateArticleRequest request,
@@ -74,4 +77,5 @@ public class ArticleController {
         ArticleResponse updatedArticle = articleService.update(articleId, request, userDetails.getUserId());
         return ResponseEntity.ok(updatedArticle);
     }
+
 }
