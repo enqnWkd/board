@@ -1,53 +1,83 @@
 package com.example.board.service;
 
-import com.example.board.domain.Article;
-import com.example.board.domain.ArticleLike;
-import com.example.board.domain.User;
 import com.example.board.exception.Errorcode;
 import com.example.board.exception.NotFoundException;
-import com.example.board.repository.ArticleLikeRepository;
 import com.example.board.repository.ArticleRepository;
 import com.example.board.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.concurrent.TimeUnit;
 
-import java.util.Optional;
-
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ArticleLikeService {
 
-    private final ArticleLikeRepository articleLikeRepository;
     private final ArticleRepository articleRepository;
     private final UserRepository userRepository;
+    private final RedisTemplate<String, String> redisTemplate;
+
+    private static final String LIKE_KEY_PREFIX = "likes:";
+    private static final long LIKE_EXPIRATION_DAYS = 30;
 
     @Transactional
     public boolean toggleLike(Long articleId, Long userId) {
 
-        Article article = articleRepository.findById(articleId)
-                .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
+        articleRepository.findById(articleId)
+            .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException(Errorcode.USER_NOT_FOUND));
+        userRepository.findById(userId)
+            .orElseThrow(() -> new NotFoundException(Errorcode.USER_NOT_FOUND));
 
-        Optional<ArticleLike> like = articleLikeRepository.findByUserAndArticle(user, article);
+        String likeKey = LIKE_KEY_PREFIX + articleId;
+        String userIdStr = userId.toString();
 
-        if(like.isPresent()) {
-            articleLikeRepository.delete(like.get());
+        //redis 사용자가 이미 좋아요 했는지 확인
+        Boolean alreadyLiked = redisTemplate.opsForSet()
+                .isMember(likeKey, userIdStr);
+
+        if (alreadyLiked != null && alreadyLiked) {
+            //이미 좋아요한 경우: 제거
+            redisTemplate.opsForSet().remove(likeKey, userIdStr);
+            log.info("게시글 {} 좋아요 취소 - 사용자: {}", articleId, userId);
             return false;
+        } else {
+            //좋아요하지 않은 경우: 추가
+            redisTemplate.opsForSet().add(likeKey, userIdStr);
+            //TTL 설정
+            redisTemplate.expire(likeKey, LIKE_EXPIRATION_DAYS, TimeUnit.DAYS);
+            log.info("게시글 {} 좋아요 추가 - 사용자: {}", articleId, userId);
+            return true;
         }
-
-        ArticleLike articleLike = new ArticleLike(user, article);
-        articleLikeRepository.save(articleLike);
-
-        return true;
     }
 
     public Long getLikeCount(Long articleId) {
-        Article article = articleRepository.findById(articleId)
-                .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
+        articleRepository.findById(articleId)
+            .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
 
-        return articleLikeRepository.countByArticleId(articleId);
+        String likeKey = LIKE_KEY_PREFIX + articleId;
+        Long count = redisTemplate.opsForSet().size(likeKey);
+
+        return count != null ? count : 0L;
+    }
+
+    public boolean isLikedByUser(Long articleId, Long userId) {
+        String likeKey = LIKE_KEY_PREFIX + articleId;
+        Boolean isLiked = redisTemplate.opsForSet()
+                .isMember(likeKey, userId.toString());
+
+        return isLiked != null && isLiked;
+    }
+
+    /**
+     * 게시글 삭제 시 관련 좋아요 데이터 정리
+     */
+    public void deleteLikesForArticle(Long articleId) {
+        String likeKey = LIKE_KEY_PREFIX + articleId;
+        Boolean deleted = redisTemplate.delete(likeKey);
+        log.info("게시글 {} 좋아요 데이터 삭제: {}", articleId, deleted);
     }
 }
