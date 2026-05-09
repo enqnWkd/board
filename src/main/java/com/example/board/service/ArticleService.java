@@ -6,15 +6,18 @@ import com.example.board.dto.request.AddArticleRequest;
 import com.example.board.dto.response.ArticleResponse;
 import com.example.board.dto.request.UpdateArticleRequest;
 import com.example.board.exception.*;
-import com.example.board.repository.ArticleLikeRepository;
 import com.example.board.repository.ArticleRepository;
 import com.example.board.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -22,7 +25,7 @@ public class ArticleService {
 
     private final ArticleRepository articleRepository;
     private final UserRepository userRepository;
-    private final ArticleLikeRepository articleLikeRepository;
+    private final ArticleLikeService articleLikeService;
 
     public ArticleResponse save(AddArticleRequest request, Long userId) {
         User user = userRepository.findById(userId)
@@ -30,29 +33,42 @@ public class ArticleService {
 
         Article article = request.toEntity();
         article.setUser(user);
-        articleRepository.save(article);
+        Article savedArticle = articleRepository.save(article);
 
-        return ArticleResponse.from(article, 0L);
+        log.info("게시글 저장 완료 - articleId: {}", savedArticle.getId());
+
+        return ArticleResponse.from(savedArticle, 0L, false);
     }
 
-    public Page<ArticleResponse> findAll(Pageable pageable) {
-        return articleRepository.findAllWithUser(pageable)
-                .map(article -> new ArticleResponse(
-                        article,
-                        articleLikeRepository.countByArticleId(article.getId())
-                ));
+    public Page<ArticleResponse> findAll(Pageable pageable, Long userId) {
+        log.debug("게시글 목록 조회 - page: {}, size: {}", pageable.getPageNumber(), pageable.getPageSize());
+
+        Page<Article> articles = articleRepository.findAllWithUser(pageable);
+
+        return articles.map(article -> {
+            Long likeCount = articleLikeService.getLikeCount(article.getId());
+            boolean likedByMe = userId != null &&
+                    articleLikeService.isLikedByUser(article.getId(), userId);
+
+            return ArticleResponse.from(article, likeCount, likedByMe);
+        });
     }
 
-    public ArticleResponse findArticle(Long articleId) {
+    public ArticleResponse findArticle(Long articleId, Long userId) {
+        log.debug("게시글 상세 조회 - articleId: {}", articleId);
+
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
 
-        Long likeCount = articleLikeRepository.countByArticleId(articleId);
+        Long likeCount = articleLikeService.getLikeCount(articleId);
+        boolean likedByMe = userId != null &&
+                articleLikeService.isLikedByUser(articleId, userId);
 
-        return ArticleResponse.from(article, likeCount);
+        return ArticleResponse.from(article, likeCount, likedByMe);
     }
 
     public void deleteAll() {
+        log.warn("모든 게시글 삭제");
         articleRepository.deleteAll();
     }
 
@@ -65,13 +81,14 @@ public class ArticleService {
             throw new AccessDeniedException(Errorcode.ACCESS_DENIED);
         }
 
-        articleLikeRepository.deleteByArticleId(articleId);
+        articleLikeService.deleteLikesForArticle(articleId);
 
         articleRepository.deleteById(articleId);
+
+        log.info("게시글 삭제 완료 - articleId: {}", articleId);
     }
 
     public ArticleResponse update(Long articleId, UpdateArticleRequest request, Long userId) {
-
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
 
@@ -81,18 +98,27 @@ public class ArticleService {
 
         article.update(request.getTitle(), request.getContent());
 
-        Long likeCount = articleLikeRepository.countByArticleId(articleId);
+        //redis에서 좋아요 수 조회
+        Long likeCount = articleLikeService.getLikeCount(articleId);
+        boolean likedByMe = articleLikeService.isLikedByUser(articleId, userId);
 
-        return ArticleResponse.from(article, likeCount);
+        log.info("게시글 수정 완료 - articleId: {}", articleId);
+
+        return ArticleResponse.from(article, likeCount, likedByMe);
     }
 
-    public Page<ArticleResponse> search(String keyword, Pageable pageable) {
+    @Transactional(readOnly = true)
+    public Page<ArticleResponse> search(String keyword, Pageable pageable, Long userId) {
+        log.debug("게시글 검색 - keyword: {}, page: {}", keyword, pageable.getPageNumber());
 
-        keyword = keyword.trim();
-        return articleRepository.search(keyword, pageable)
-                .map(article -> new ArticleResponse(
-                        article,
-                        articleLikeRepository.countByArticleId(article.getId())
-                ));
+        Page<Article> articles = articleRepository.search(keyword, pageable);
+
+        return articles.map(article -> {
+            Long likeCount = articleLikeService.getLikeCount(article.getId());
+            boolean likedByMe = userId != null &&
+                    articleLikeService.isLikedByUser(article.getId(), userId);
+
+            return ArticleResponse.from(article, likeCount, likedByMe);
+        });
     }
 }

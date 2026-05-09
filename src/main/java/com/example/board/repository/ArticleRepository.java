@@ -7,20 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface ArticleRepository extends JpaRepository<Article, Long> {
 
-    @Query(
-            value = """
-        select a
-        from Article a
-        join fetch a.user
-    """,
-            countQuery = """
-        select count(a)
-        from Article a
-    """
-    )
-    Page<Article> findAllWithUser(Pageable pageable);
+public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     @Query(
             value = """
@@ -42,4 +30,17 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     """
     )
     Page<Article> search(@Param("keyword") String keyword, Pageable pageable);
+
+    @Query(
+            value = """
+    select a
+    from Article a
+    join fetch a.user
+    """,
+            countQuery = """
+    select count(a)
+    from Article a
+    """
+    )
+    Page<Article> findAllWithUser(Pageable pageable);
 }

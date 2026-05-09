@@ -5,10 +5,11 @@ import com.example.board.domain.User;
 import com.example.board.domain.UserRole;
 import com.example.board.dto.request.AddArticleRequest;
 import com.example.board.dto.request.UpdateArticleRequest;
-import com.example.board.exception.AuthException;
 import com.example.board.exception.Errorcode;
+import com.example.board.exception.NotFoundException;
 import com.example.board.repository.ArticleRepository;
 import com.example.board.repository.UserRepository;
+import com.example.board.security.CustomUserDetails;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,23 +18,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.WebApplicationContext;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Transactional
 class ArticleControllerTest {
 
     @Autowired
@@ -43,148 +42,200 @@ class ArticleControllerTest {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private WebApplicationContext webApplicationContext;
+    private ArticleRepository articleRepository;
 
-    @Autowired
-    private ArticleRepository blogRepository;
     @Autowired
     private UserRepository userRepository;
 
+    private User testUser;
+
     @BeforeEach
-    public void mockMvcSetUp() {
-        this.mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
-        blogRepository.deleteAll();
-        userRepository.save(new User("test@example.com", "encoded-password", UserRole.ADMIN));
+    void setUp() {
+        // 기존 데이터 삭제
+        articleRepository.deleteAll();
+        userRepository.deleteAll();
+
+        // 테스트 사용자 생성
+        testUser = new User("test@example.com", "password", UserRole.ROLE);
+        userRepository.save(testUser);
     }
 
-    @DisplayName("블로그 글 추가 성공")
-    @WithMockUser(username = "test@example.com", roles = "USER")
+    @DisplayName("게시글 추가 성공")
     @Test
-    public void addArticle() throws Exception {
-        //given
+    void addArticle() throws Exception {
+        // given
         String url = "/api/articles";
-        String title = "title";
-        String content = "content";
+        String title = "제목";
+        String content = "내용";
         AddArticleRequest request = new AddArticleRequest(title, content);
+        String requestBody = objectMapper.writeValueAsString(request);
 
-        //객체를 json으로 직렬화
-        String requestBody = objectMapper.writeValueAsString(request); //JSON으로 직렬화
+        // when
+        CustomUserDetails userDetails = new CustomUserDetails(testUser);
 
-        //when : API 요청
         ResultActions result = mockMvc.perform(
                 post(url)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody)
+                        .with(authentication(
+                                new UsernamePasswordAuthenticationToken(
+                                        userDetails,
+                                        null,
+                                        userDetails.getAuthorities()
+                                )
+                        ))
         );
 
-        //then
         result.andExpect(status().isCreated());
-
-        List<Article> articleList = blogRepository.findAll();
-
-        assertThat(articleList.size()).isEqualTo(1);
-        assertThat(articleList.get(0).getTitle()).isEqualTo(title);
-        assertThat(articleList.get(0).getContent()).isEqualTo(content);
     }
 
-    @DisplayName("블로그 글 전체 조회 성공")
+    @DisplayName("게시글 목록 조회 성공 (페이징)")
+    @WithMockUser(username = "test@example.com")
     @Test
-    public void testFindAll() throws Exception {
-        //given
-        final String url = "/api/articles";
-        final String title = "제목";
-        final String content = "내용";
-        Article article = blogRepository.save(new Article(title, content));
+    void findAllArticles() throws Exception {
+        // given
+        String url = "/api/articles";
+        Article article1 = articleRepository.save(new Article("제목1", "내용1", testUser));
+        Article article2 = articleRepository.save(new Article("제목2", "내용2", testUser));
 
-        //when
-        ResultActions result = mockMvc.perform(get(url));
+        // when
+        ResultActions result = mockMvc.perform(
+                get(url + "?page=0&size=20")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .with(authentication(
+                                new UsernamePasswordAuthenticationToken(
+                                        new CustomUserDetails(testUser),
+                                        null,
+                                        List.of()
+                                )
+                        ))
+        );
 
-        //then : 정상적으로 요청이 되었는지 검증
+        // then - Page 응답 형식 확인
         result.andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].title").value(article.getTitle()))
-                .andExpect(jsonPath("$[0].content").value(article.getContent()));
+                .andExpect(jsonPath("$.content[0].title").value(article1.getTitle()))
+                .andExpect(jsonPath("$.content[0].content").value(article1.getContent()))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.totalPages").value(1));
     }
 
-    @DisplayName("특정 글 조회 성공")
+    @DisplayName("게시글 상세 조회 성공")
+    @WithMockUser(username = "test@example.com")
     @Test
-    public void testfindOne()  throws Exception {
-        //given
-        final String url = "/api/articles/{id}";
-        final String title = "제목";
-        final String content = "내용";
-        Article article = blogRepository.save(new Article(title, content));
-        Long savedId = article.getId();
+    void findArticle() throws Exception {
+        // given
+        Article article = articleRepository.save(new Article("제목", "내용", testUser));
+        String url = "/api/articles/{id}";
 
-        //when
-        ResultActions result = mockMvc.perform(get(url, savedId));
+        // when
+        ResultActions result = mockMvc.perform(
+                get(url, article.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .with(authentication(
+                                new UsernamePasswordAuthenticationToken(
+                                        new CustomUserDetails(testUser),
+                                        null,
+                                        List.of()
+                                )
+                        ))
+        );
 
-        //then
+        // then
         result.andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value(article.getTitle()))
-                .andExpect(jsonPath("$.content").value(article.getContent()));
+                .andExpect(jsonPath("$.content").value(article.getContent()))
+                .andExpect(jsonPath("$.likeCount").exists())
+                .andExpect(jsonPath("$.likedByMe").exists());
     }
 
-    @DisplayName("블로그 전체 글 삭제 성공")
+    @DisplayName("게시글 검색 성공")
+    @WithMockUser(username = "test@example.com")
     @Test
-    public void testDeleteAllArticle() throws Exception {
-        // given: 테스트용 데이터 준비 (글 저장)
-        final String url = "/api/articles";
-        String title = "제목1";
-        String content = "내용1";
-        blogRepository.save(new Article(title, content));
-        blogRepository.save(new Article(title, content));
+    void searchArticles() throws Exception {
+        // given
+        String url = "/api/articles/search";
+        articleRepository.save(new Article("Spring Boot 튜토리얼", "내용", testUser));
+        articleRepository.save(new Article("Redis 캐싱", "내용", testUser));
 
-        // when: 삭제 요청 수행
-        mockMvc.perform(delete(url)).andExpect(status().isOk()); // delete(url, 변수1, ...)
+        // when
+        ResultActions result = mockMvc.perform(
+                get(url + "?keyword=Spring&page=0&size=20")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .with(authentication(
+                                new UsernamePasswordAuthenticationToken(
+                                        new CustomUserDetails(testUser),
+                                        null,
+                                        List.of()
+                                )
+                        ))
+        );
 
-        // then: 삭제 이후, 글이 실제로 삭제되었는지 검증
-        List<Article> afterDeleteList = blogRepository.findAll();
-        assertThat(afterDeleteList).isEmpty();
+        // then
+        result.andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].title").value("Spring Boot 튜토리얼"))
+                .andExpect(jsonPath("$.totalElements").value(1));
     }
 
-    @DisplayName("블로그 글 삭제 성공")
+    @DisplayName("게시글 수정 성공")
+    @WithMockUser(username = "test@example.com")
     @Test
-    public void testDeleteArticle() throws Exception {
-        // given: 테스트용 데이터 준비 (글 저장)
-        final String url = "/api/articles/{id}";
-        String title = "제목1";
-        String content = "내용1";
-        Article article = blogRepository.save(new Article(title, content));
-        Long savedId = article.getId();
-
-        // when: 삭제 요청 수행
-        mockMvc.perform(delete(url, savedId)).andExpect(status().isOk()); // delete(url, 변수1, ...)
-
-        // then: 삭제 이후, 글이 실제로 삭제되었는지 검증
-        List<Article> afterDeleteList = blogRepository.findAll();
-        assertThat(afterDeleteList).isEmpty();
-    }
-
-    @DisplayName("블로그 수정 성공")
-    @Test
-    public void updateArticle() throws Exception {
-        //given
+    void updateArticle() throws Exception {
+        // given
+        Article article = articleRepository.save(new Article("원본 제목", "원본 내용", testUser));
         String url = "/api/articles/{id}";
-        String title = "제목";
-        String content = "내용";
-        Article article = blogRepository.save(new Article(title, content));
 
-        String modifiedTitle = "제목수정";
-        String modifiedContent = "내용수정";
-        UpdateArticleRequest request = new UpdateArticleRequest(modifiedTitle, modifiedContent);
+        UpdateArticleRequest request = new UpdateArticleRequest("수정된 제목", "수정된 내용");
+        String requestBody = objectMapper.writeValueAsString(request);
 
-        //when
-        ResultActions result = mockMvc.perform(put(url, article.getId())
-                .content(objectMapper.writeValueAsString(request))
-                .contentType(MediaType.APPLICATION_JSON_VALUE));
+        // when
+        ResultActions result = mockMvc.perform(
+                put(url, article.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody)
+                        .with(authentication(
+                                new UsernamePasswordAuthenticationToken(
+                                        new CustomUserDetails(testUser),
+                                        null,
+                                        List.of()
+                                )
+                        ))
+        );
 
-        //then
+        // then
         result.andExpect(status().isOk());
 
-        Article afterModifiedArticle = blogRepository.findById(article.getId())
-                .orElseThrow(() -> new AuthException(Errorcode.ARTICLE_NOT_FOUND));
-        assertThat(afterModifiedArticle.getTitle()).isEqualTo(modifiedTitle);
-        assertThat(afterModifiedArticle.getContent()).isEqualTo(modifiedContent);
-
+        Article updated = articleRepository.findById(article.getId())
+                .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
+        assertThat(updated.getTitle()).isEqualTo("수정된 제목");
+        assertThat(updated.getContent()).isEqualTo("수정된 내용");
     }
+
+    @DisplayName("게시글 삭제 성공")
+    @WithMockUser(username = "test@example.com")
+    @Test
+    void deleteArticle() throws Exception {
+        // given
+        Article article = articleRepository.save(new Article("제목", "내용", testUser));
+        String url = "/api/articles/{id}";
+
+        // when
+        ResultActions result = mockMvc.perform(
+                delete(url, article.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .with(authentication(
+                                new UsernamePasswordAuthenticationToken(
+                                        new CustomUserDetails(testUser),
+                                        null,
+                                        List.of()
+                                )
+                        ))
+        );
+
+        // then
+        result.andExpect(status().isNoContent());
+
+        List<Article> articles = articleRepository.findAll();
+        assertThat(articles).isEmpty();
+    }
+
 }
