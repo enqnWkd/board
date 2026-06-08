@@ -27,24 +27,29 @@ public class ArticleLikeServiceTest {
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
 
+    private User testUser;
+
     @BeforeEach
     void setUp() {
         redisTemplate.getConnectionFactory()
                 .getConnection()
                 .serverCommands()
                 .flushDb();
+
+        // 테스트 사용자 생성
+        testUser = new User("test@example.com", "password", UserRole.USER);
+        userRepository.save(testUser);
     }
 
     @Test
     void 좋아요_추가_테스트() {
         //given
-        User user = userRepository.save(new User("test@ex.com", "pw", UserRole.ROLE));
         Article article = articleRepository.save(
-                new Article("제목", "내용", user)
+                new Article("제목", "내용", testUser)
         );
 
         //when
-        boolean result = articleLikeService.toggleLike(article.getId(), user.getId());
+        boolean result = articleLikeService.toggleLike(article.getId(), testUser.getId());
 
         //then
         assertThat(result).isTrue();
@@ -54,14 +59,13 @@ public class ArticleLikeServiceTest {
     @Test
     void 좋아요_취소_테스트() {
         //given
-        User user = userRepository.save(new User("test@ex.com", "pw", UserRole.ROLE));
         Article article = articleRepository.save(
-                new Article("제목", "내용", user)
+                new Article("제목", "내용", testUser)
         );
-        articleLikeService.toggleLike(article.getId(), user.getId());
+        articleLikeService.toggleLike(article.getId(), testUser.getId());
 
         //when
-        boolean result = articleLikeService.toggleLike(article.getId(), user.getId());
+        boolean result = articleLikeService.toggleLike(article.getId(), testUser.getId());
 
         //then
         assertThat(result).isFalse();
@@ -71,15 +75,14 @@ public class ArticleLikeServiceTest {
     @Test
     void 중복_좋아요_방지() {
         //given
-        User user = userRepository.save(new User("test@ex.com", "pw", UserRole.ROLE));
         Article article = articleRepository.save(
-                new Article("제목", "내용", user)
+                new Article("제목", "내용", testUser)
         );
 
         //when - 좋아요 중복
-        articleLikeService.toggleLike(article.getId(), user.getId());
-        articleLikeService.toggleLike(article.getId(), user.getId());
-        articleLikeService.toggleLike(article.getId(), user.getId());
+        articleLikeService.toggleLike(article.getId(), testUser.getId());
+        articleLikeService.toggleLike(article.getId(), testUser.getId());
+        articleLikeService.toggleLike(article.getId(), testUser.getId());
 
         //then - 검증
         assertThat(articleLikeService.getLikeCount(article.getId())).isEqualTo(1L);
@@ -88,9 +91,9 @@ public class ArticleLikeServiceTest {
     @Test
     void 여러_사용자_좋아요() {
         //given
-        User user1 = userRepository.save(new User("test1@ex.com", "pw", UserRole.ROLE));
-        User user2 = userRepository.save(new User("test2@ex.com", "pw", UserRole.ROLE));
-        User user3 = userRepository.save(new User("test3@ex.com", "pw", UserRole.ROLE));
+        User user1 = userRepository.save(new User("test1@ex.com", "pw", UserRole.USER));
+        User user2 = userRepository.save(new User("test2@ex.com", "pw", UserRole.USER));
+        User user3 = userRepository.save(new User("test3@ex.com", "pw", UserRole.USER));
         Article article = articleRepository.save(
                 new Article("제목", "내용", user1)
         );
@@ -111,13 +114,12 @@ public class ArticleLikeServiceTest {
     @Test
     void Redis에_정상_저장() {
         //given
-        User user = userRepository.save(new User("test@ex.com", "pw", UserRole.ROLE));
         Article article = articleRepository.save(
-                new Article("제목", "내용", user)
+                new Article("제목", "내용", testUser)
         );
 
         //when
-        articleLikeService.toggleLike(article.getId(), user.getId());
+        articleLikeService.toggleLike(article.getId(), testUser.getId());
 
         //then
         String likeKey = "likes:" + article.getId();

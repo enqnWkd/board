@@ -48,6 +48,16 @@ public class Article {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "view_count", nullable = false)
+    private Long viewCount = 0L;
+
+    @Version //낙관적 락
+    private Long version = 0L;
+
+    public void incrementViewCount() {
+        this.viewCount++;
+    }
+
     @Builder
     public Article(String title, String content) {
         this.title = title;

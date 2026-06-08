@@ -54,16 +54,29 @@ public class ArticleController {
                 .body(articles);
     }
 
+    //조회수 증가 안 함 (캐시 조회 등에 사용)
+    @GetMapping("/{id}/details")
+    public ResponseEntity<ArticleResponse> findArticle(
+            @PathVariable("id") Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Long userId = userDetails != null ? userDetails.getUserId() : null;
+        ArticleResponse articleResponse = articleService.findArticle(id, userId);
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(articleResponse);
+    }
+
     //게시글 상세 조회
     @GetMapping("/{id}")
-    public ResponseEntity<ArticleResponse> findArticle(
+    public ResponseEntity<ArticleResponse> findArticleWithView (
             @PathVariable("id") Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         log.debug("게시글 상세 조회 - articleId: {}", id);
 
         Long userId = userDetails != null ? userDetails.getUserId() : null;
-        ArticleResponse articleResponse = articleService.findArticle(id, userId);
+        ArticleResponse articleResponse = articleService.findArticleWithViewIncrement(id, userId);
 
         return ResponseEntity.status(HttpStatus.OK)
                 .body(articleResponse);

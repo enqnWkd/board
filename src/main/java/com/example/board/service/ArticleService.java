@@ -16,6 +16,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+
+import static java.util.stream.Collectors.toList;
 
 @Slf4j
 @Service
@@ -45,6 +48,14 @@ public class ArticleService {
 
         Page<Article> articles = articleRepository.findAllWithUser(pageable);
 
+        List<Long> articleIds = articles.getContent().stream()
+                .map(Article::getId)
+                .collect(toList());
+
+        // 한 번에 모든 좋아요 정보 가져오기 (새로운 메서드)
+        Map<Long, Long> likeCounts = articleLikeService.getLikeCountsForArticles(articleIds);
+        Map<Long, Boolean> userLikes = articleLikeService.getUserLikesForArticles(articleIds, userId);
+
         return articles.map(article -> {
             Long likeCount = articleLikeService.getLikeCount(article.getId());
             boolean likedByMe = userId != null &&
@@ -54,8 +65,8 @@ public class ArticleService {
         });
     }
 
+    @Transactional(readOnly = true)
     public ArticleResponse findArticle(Long articleId, Long userId) {
-        log.debug("게시글 상세 조회 - articleId: {}", articleId);
 
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));

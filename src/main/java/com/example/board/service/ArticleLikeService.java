@@ -9,6 +9,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -79,5 +83,33 @@ public class ArticleLikeService {
         String likeKey = LIKE_KEY_PREFIX + articleId;
         Boolean deleted = redisTemplate.delete(likeKey);
         log.info("게시글 {} 좋아요 데이터 삭제: {}", articleId, deleted);
+    }
+
+    // 여러 게시글의 좋아요 수를 한 번에 조회
+    public Map<Long, Long> getLikeCountsForArticles(List<Long> articleIds) {
+        Map<Long, Long> result = new HashMap<>();
+
+        for (Long articleId : articleIds) {
+            String likeKey = LIKE_KEY_PREFIX + articleId;
+            Long count = redisTemplate.opsForSet().size(likeKey);
+            result.put(articleId, count != null ? count : 0L);
+        }
+
+        return result;
+    }
+
+    // 특정 사용자가 어떤 게시글에 좋아요했는지 한 번에 조회
+    public Map<Long, Boolean> getUserLikesForArticles(List<Long> articleIds, Long userId) {
+        Map<Long, Boolean> result = new HashMap<>();
+        String userIdStr = userId.toString();
+
+        for (Long articleId : articleIds) {
+            String likeKey = LIKE_KEY_PREFIX + articleId;
+            Boolean isLiked = redisTemplate.opsForSet()
+                    .isMember(likeKey, userIdStr);
+            result.put(articleId, isLiked != null && isLiked);
+        }
+
+        return result;
     }
 }
