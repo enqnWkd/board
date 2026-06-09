@@ -78,6 +78,25 @@ public class ArticleService {
         return ArticleResponse.from(article, likeCount, likedByMe);
     }
 
+
+    public ArticleResponse findArticleWithViewIncrement(Long articleId, Long userId) {
+
+        Article article = articleRepository.findByIdWithUser(articleId)
+                .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
+
+        //조회수 증가
+//        article.incrementViewCount();
+
+        Long likeCount = articleLikeService.getLikeCount(articleId);
+        boolean likedByMe = userId != null &&
+                articleLikeService.isLikedByUser(articleId, userId);
+
+        log.info("게시글 조회 - articleId: {}, 조회수: {}", articleId, article.getViewCount());
+
+        return ArticleResponse.from(article, likeCount, likedByMe);
+    }
+
+
     public void deleteAll() {
         log.warn("모든 게시글 삭제");
         articleRepository.deleteAll();
