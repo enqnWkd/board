@@ -52,16 +52,10 @@ public class Article {
     private Long viewCount = 0L;
 
     @Version //낙관적 락
-    private Long version = 0L;
+    private Long version;
 
     public void incrementViewCount() {
         this.viewCount++;
-    }
-
-    @Builder
-    public Article(String title, String content) {
-        this.title = title;
-        this.content = content;
     }
 
     @Builder

@@ -59,9 +59,6 @@ public class ArticleLikeService {
     }
 
     public Long getLikeCount(Long articleId) {
-        articleRepository.findById(articleId)
-            .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
-
         String likeKey = LIKE_KEY_PREFIX + articleId;
         Long count = redisTemplate.opsForSet().size(likeKey);
 

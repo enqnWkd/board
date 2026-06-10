@@ -68,7 +68,7 @@ public class ArticleService {
     @Transactional(readOnly = true)
     public ArticleResponse findArticle(Long articleId, Long userId) {
 
-        Article article = articleRepository.findById(articleId)
+        Article article = articleRepository.findByIdWithUser(articleId)
                 .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
 
         Long likeCount = articleLikeService.getLikeCount(articleId);
