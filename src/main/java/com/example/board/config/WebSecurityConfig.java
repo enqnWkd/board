@@ -51,8 +51,8 @@ public class WebSecurityConfig {
                 )
                 .authorizeHttpRequests(
                         auth -> auth
-                        .requestMatchers("/auth/login", "/auth/signup", "/auth/reissue").permitAll()
-                        .requestMatchers("/api/**").authenticated() //그외는 인증 필요
+                        .requestMatchers("/auth/login", "/auth/signup", "/auth/reissue", "/api/articles/**").permitAll()
+                        .requestMatchers("/api/api").authenticated() //그외는 인증 필요
                         .anyRequest().permitAll()
                 )
                 .exceptionHandling(

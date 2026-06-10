@@ -2,8 +2,6 @@ package com.example.board.controller;
 
 import com.example.board.security.CustomUserDetails;
 import com.example.board.service.ArticleLikeService;
-import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;

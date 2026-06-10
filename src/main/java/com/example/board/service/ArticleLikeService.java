@@ -95,6 +95,7 @@ public class ArticleLikeService {
         return result;
     }
 
+    /*
     // 특정 사용자가 어떤 게시글에 좋아요했는지 한 번에 조회
     public Map<Long, Boolean> getUserLikesForArticles(List<Long> articleIds, Long userId) {
         Map<Long, Boolean> result = new HashMap<>();
@@ -109,4 +110,6 @@ public class ArticleLikeService {
 
         return result;
     }
+
+     */
 }

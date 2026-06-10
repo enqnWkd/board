@@ -54,12 +54,13 @@ public class ArticleService {
 
         // 한 번에 모든 좋아요 정보 가져오기 (새로운 메서드)
         Map<Long, Long> likeCounts = articleLikeService.getLikeCountsForArticles(articleIds);
-        Map<Long, Boolean> userLikes = articleLikeService.getUserLikesForArticles(articleIds, userId);
+//        Map<Long, Boolean> userLikes = articleLikeService.getUserLikesForArticles(articleIds, userId);
 
         return articles.map(article -> {
-            Long likeCount = articleLikeService.getLikeCount(article.getId());
-            boolean likedByMe = userId != null &&
-                    articleLikeService.isLikedByUser(article.getId(), userId);
+            Long likeCount = likeCounts.getOrDefault(article.getId(), 0L);
+//            boolean likedByMe = userId != null &&
+//                    articleLikeService.isLikedByUser(article.getId(), userId);
+            boolean likedByMe = false;
 
             return ArticleResponse.from(article, likeCount, likedByMe);
         });
