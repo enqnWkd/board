@@ -30,8 +30,8 @@ public class JwtTokenProvider {
     private final SecretKey key;
     private final CustomUserDetailsService customUserDetailsService;
     private final UserRepository userRepository;
-    private long accessTokenValidTime = 1000L * 60 * 5;
-    private long refreshTokenValidTime = 1000L * 60 * 30;
+    private long accessTokenValidTime = 1000L * 60 * 15;
+    private long refreshTokenValidTime = 1000L * 60 * 60;
 
     public JwtTokenProvider(@Value("${jwt.secret}") String secretKey, CustomUserDetailsService customUserDetailsService, UserRepository userRepository) {
         byte[] keyBytes = Decoders.BASE64URL.decode(secretKey);

@@ -2,6 +2,7 @@ package com.example.board.service;
 
 import com.example.board.domain.Article;
 import com.example.board.domain.Comment;
+import com.example.board.domain.NotificationType;
 import com.example.board.domain.User;
 import com.example.board.dto.request.AddCommentRequest;
 import com.example.board.dto.response.CommentResponse;
@@ -27,6 +28,7 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final ArticleRepository articleRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public Comment save(Long articleId, AddCommentRequest request, Long userId) {
@@ -42,7 +44,20 @@ public class CommentService {
                 .user(user)
                 .build();
 
-        return commentRepository.save(comment);
+        Comment savedComment = commentRepository.save(comment);
+
+        User articleAuthor = article.getUser();
+        if (!articleAuthor.getId().equals(user)) {
+            notificationService.send(
+                    articleAuthor,
+                    NotificationType.COMMENT,
+                    articleId,
+                    userId,
+                    user.getEmail() + "님이 댓글을 남겼습니다."
+            );
+        }
+
+        return savedComment;
     }
 
     public List<CommentResponse> getCommentsByArticle(Long articleId) {

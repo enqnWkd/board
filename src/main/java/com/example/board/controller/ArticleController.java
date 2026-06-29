@@ -31,7 +31,7 @@ public class ArticleController {
             @RequestBody AddArticleRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
             ) {
-        log.info("게시글 등옥 요청 - userId: {}", userDetails.getUserId());
+        log.info("게시글 등록 요청 - userId: {}", userDetails.getUserId());
 
         ArticleResponse savedArticle = articleService.save(request, userDetails.getUserId());
 
