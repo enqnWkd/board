@@ -16,10 +16,10 @@ public class ArticleResponse {
     private final String title;
     private final String content;
     private final String email;
-    private Long likeCount;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-    private boolean likedByMe;
+    private final Long likeCount;
+    private final LocalDateTime createdAt;
+    private final LocalDateTime updatedAt;
+    private final boolean likedByMe;
 
     public static ArticleResponse from(Article article, Long likeCount, boolean likedByMe) {
         return ArticleResponse.builder()
