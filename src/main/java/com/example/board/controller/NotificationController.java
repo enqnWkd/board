@@ -45,6 +45,11 @@ public class NotificationController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping("/unread-count")
+    public ResponseEntity<Long> getUnreadCount(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(notificationService.getUnreadCount(userDetails.getUserId()));
+    }
+
     @MessageMapping("/sendMessage")
     @SendTo("/topic/notifications")
     public String sendMessage(String message) {
