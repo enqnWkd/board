@@ -47,7 +47,7 @@ public class CommentService {
         Comment savedComment = commentRepository.save(comment);
 
         User articleAuthor = article.getUser();
-        if (!articleAuthor.getId().equals(user)) {
+        if (!articleAuthor.getId().equals(userId)) {
             notificationService.send(
                     articleAuthor,
                     NotificationType.COMMENT,

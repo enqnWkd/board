@@ -21,7 +21,7 @@ public class NotificationService {
     private final SimpMessagingTemplate messagingTemplate;
     private final RedisTemplate<String, String> redisTemplate;
 
-    private static final String UNREAD_COUNT_KEY_PREFIX = "notification:unread:";
+    public static final String UNREAD_COUNT_KEY_PREFIX = "notification:unread:";
 
     @Transactional
     public void send(User receiver, NotificationType type, Long articleId, Long senderId, String content) {
@@ -53,15 +53,6 @@ public class NotificationService {
                 .map(NotificationResponse::from);
     }
 
-    @Transactional
-    public void markAllAsRead(Long userId) {
-        notificationRepository.markAllAsRead(userId);
-
-        //unread count 초기화
-        String key = UNREAD_COUNT_KEY_PREFIX + userId;
-        redisTemplate.opsForValue().set(UNREAD_COUNT_KEY_PREFIX + userId, String.valueOf(key));
-    }
-
     public Long getUnreadCount(Long userId) {
         String key = UNREAD_COUNT_KEY_PREFIX + userId;
         String cached = redisTemplate.opsForValue().get(key);
@@ -74,5 +65,17 @@ public class NotificationService {
         long count = notificationRepository.countByReceiverIdAndIsReadFalse(userId);
         redisTemplate.opsForValue().set(key, String.valueOf(count));
         return count;
+    }
+
+    @Transactional
+    public void markAllAsRead(Long userId) {
+        notificationRepository.markAllAsRead(userId);
+
+        //unread count 초기화
+        String key = UNREAD_COUNT_KEY_PREFIX + userId;
+
+        //db 재계산
+        long count = notificationRepository.countByReceiverIdAndIsReadFalse(userId);
+        redisTemplate.opsForValue().set(key, String.valueOf(count));
     }
 }
