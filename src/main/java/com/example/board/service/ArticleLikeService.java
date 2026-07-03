@@ -1,5 +1,8 @@
 package com.example.board.service;
 
+import com.example.board.domain.Article;
+import com.example.board.domain.NotificationType;
+import com.example.board.domain.User;
 import com.example.board.exception.Errorcode;
 import com.example.board.exception.NotFoundException;
 import com.example.board.repository.ArticleRepository;
@@ -23,6 +26,7 @@ public class ArticleLikeService {
     private final ArticleRepository articleRepository;
     private final UserRepository userRepository;
     private final RedisTemplate<String, String> redisTemplate;
+    private final NotificationService notificationService;
 
     private static final String LIKE_KEY_PREFIX = "likes:";
     private static final long LIKE_EXPIRATION_DAYS = 30;
@@ -30,11 +34,11 @@ public class ArticleLikeService {
     @Transactional
     public boolean toggleLike(Long articleId, Long userId) {
 
-        articleRepository.findById(articleId)
-            .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
+        Article article = articleRepository.findById(articleId)
+                .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
 
-        userRepository.findById(userId)
-            .orElseThrow(() -> new NotFoundException(Errorcode.USER_NOT_FOUND));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(Errorcode.USER_NOT_FOUND));
 
         String likeKey = LIKE_KEY_PREFIX + articleId;
         String userIdStr = userId.toString();
@@ -54,6 +58,19 @@ public class ArticleLikeService {
             //TTL 설정
             redisTemplate.expire(likeKey, LIKE_EXPIRATION_DAYS, TimeUnit.DAYS);
             log.info("게시글 {} 좋아요 추가 - 사용자: {}", articleId, userId);
+
+            //좋아요 추가 시 알림
+            User articleAuthor = article.getUser();
+            if (!articleAuthor.getId().equals(userId)) {
+                notificationService.send(
+                        articleAuthor,
+                        NotificationType.LIKE,
+                        articleId,
+                        userId,
+                        user.getEmail() + "님이 좋아요를 눌렀습니다."
+                );
+            }
+
             return true;
         }
     }
@@ -95,7 +112,6 @@ public class ArticleLikeService {
         return result;
     }
 
-    /*
     // 특정 사용자가 어떤 게시글에 좋아요했는지 한 번에 조회
     public Map<Long, Boolean> getUserLikesForArticles(List<Long> articleIds, Long userId) {
         Map<Long, Boolean> result = new HashMap<>();
@@ -111,5 +127,4 @@ public class ArticleLikeService {
         return result;
     }
 
-     */
 }

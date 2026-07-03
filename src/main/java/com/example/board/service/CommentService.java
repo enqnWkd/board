@@ -2,6 +2,7 @@ package com.example.board.service;
 
 import com.example.board.domain.Article;
 import com.example.board.domain.Comment;
+import com.example.board.domain.NotificationType;
 import com.example.board.domain.User;
 import com.example.board.dto.request.AddCommentRequest;
 import com.example.board.dto.response.CommentResponse;
@@ -12,12 +13,14 @@ import com.example.board.repository.ArticleRepository;
 import com.example.board.repository.CommentRepository;
 import com.example.board.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CommentService {
@@ -25,6 +28,7 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final ArticleRepository articleRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public Comment save(Long articleId, AddCommentRequest request, Long userId) {
@@ -40,7 +44,20 @@ public class CommentService {
                 .user(user)
                 .build();
 
-        return commentRepository.save(comment);
+        Comment savedComment = commentRepository.save(comment);
+
+        User articleAuthor = article.getUser();
+        if (!articleAuthor.getId().equals(userId)) {
+            notificationService.send(
+                    articleAuthor,
+                    NotificationType.COMMENT,
+                    articleId,
+                    userId,
+                    user.getEmail() + "님이 댓글을 남겼습니다."
+            );
+        }
+
+        return savedComment;
     }
 
     public List<CommentResponse> getCommentsByArticle(Long articleId) {

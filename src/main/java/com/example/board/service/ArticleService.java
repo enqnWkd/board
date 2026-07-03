@@ -54,13 +54,12 @@ public class ArticleService {
 
         // 한 번에 모든 좋아요 정보 가져오기 (새로운 메서드)
         Map<Long, Long> likeCounts = articleLikeService.getLikeCountsForArticles(articleIds);
-//        Map<Long, Boolean> userLikes = articleLikeService.getUserLikesForArticles(articleIds, userId);
+        Map<Long, Boolean> userLikes = articleLikeService.getUserLikesForArticles(articleIds, userId);
 
         return articles.map(article -> {
             Long likeCount = likeCounts.getOrDefault(article.getId(), 0L);
-//            boolean likedByMe = userId != null &&
-//                    articleLikeService.isLikedByUser(article.getId(), userId);
-            boolean likedByMe = false;
+            boolean likedByMe = userId != null &&
+                    articleLikeService.isLikedByUser(article.getId(), userId);
 
             return ArticleResponse.from(article, likeCount, likedByMe);
         });
@@ -86,7 +85,7 @@ public class ArticleService {
                 .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
 
         //조회수 증가
-//        article.incrementViewCount();
+        article.incrementViewCount();
 
         Long likeCount = articleLikeService.getLikeCount(articleId);
         boolean likedByMe = userId != null &&

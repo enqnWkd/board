@@ -56,7 +56,11 @@ class ArticleControllerTest {
         userRepository.deleteAll();
 
         // 테스트 사용자 생성
-        testUser = new User("test@example.com", "password", UserRole.USER);
+        testUser = User.builder()
+                .email("user@test.com")
+                .password("password")
+                .role(UserRole.USER)
+                .build();
         userRepository.save(testUser);
     }
 
