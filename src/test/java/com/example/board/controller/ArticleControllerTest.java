@@ -8,6 +8,7 @@ import com.example.board.dto.request.UpdateArticleRequest;
 import com.example.board.exception.Errorcode;
 import com.example.board.exception.NotFoundException;
 import com.example.board.repository.ArticleRepository;
+import com.example.board.repository.NotificationRepository;
 import com.example.board.repository.UserRepository;
 import com.example.board.security.CustomUserDetails;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,13 +48,17 @@ class ArticleControllerTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private NotificationRepository notificationRepository;
+
     private User testUser;
 
     @BeforeEach
     void setUp() {
         // 기존 데이터 삭제
-        articleRepository.deleteAll();
+        notificationRepository.deleteAll();
         userRepository.deleteAll();
+        articleRepository.deleteAll();
 
         // 테스트 사용자 생성
         testUser = User.builder()
