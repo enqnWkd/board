@@ -4,6 +4,7 @@ import com.example.board.domain.Article;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -53,4 +54,12 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     where a.id = :id
 """)
     Optional<Article> findByIdWithUser(@Param("id") Long id);
+
+    @Modifying
+    @Query("""
+           update Article a
+           set a.viewCount = :viewCount
+           where a.id = :articleId
+       """)
+    void updateViewCount(Long articleId, Long viewCount);
 }

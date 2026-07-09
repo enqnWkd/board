@@ -16,7 +16,7 @@ public class ArticleLikeController {
 
     private final ArticleLikeService articleLikeService;
 
-    @PostMapping("/{articleId}/like")
+    @PostMapping("/{articleId}/likes")
     public ResponseEntity<?> toggleLike(
             @PathVariable Long articleId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -26,7 +26,7 @@ public class ArticleLikeController {
         return ResponseEntity.ok(liked);
     }
 
-    @GetMapping("/{articleId}/like-count")
+    @GetMapping("/{articleId}/likes-count")
     public ResponseEntity<?> getLikeCount(@PathVariable Long articleId) {
         Long count = articleLikeService.getLikeCount(articleId);
         return ResponseEntity.ok(count);

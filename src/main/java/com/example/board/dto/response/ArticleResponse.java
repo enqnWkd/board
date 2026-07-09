@@ -17,17 +17,19 @@ public class ArticleResponse {
     private final String content;
     private final String email;
     private final Long likeCount;
+    private final Long viewCount;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
     private final boolean likedByMe;
 
-    public static ArticleResponse from(Article article, Long likeCount, boolean likedByMe) {
+    public static ArticleResponse from(Article article, Long likeCount, boolean likedByMe, Long viewCount) {
         return ArticleResponse.builder()
                 .id(article.getId())
                 .title(article.getTitle())
                 .content(article.getContent())
                 .email(article.getUser().getEmail())
                 .likeCount(likeCount)
+                .viewCount(viewCount)
                 .createdAt(article.getCreatedAt())
                 .updatedAt(article.getUpdatedAt())
                 .likedByMe(likedByMe)

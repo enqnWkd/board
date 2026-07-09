@@ -1,8 +1,8 @@
 INSERT IGNORE INTO users (email, password, role)
 VALUES
-('user1@test.com', '$2a$10$Djt1NFxR/2FN.H4L6zcP5uRCCOxk3vXV0owU57mJtQQGRsT.cFX/i', 'USER'),
-('user2@test.com', '$2a$10$Djt1NFxR/2FN.H4L6zcP5uRCCOxk3vXV0owU57mJtQQGRsT.cFX/i', 'USER'),
-('user3@test.com', '$2a$10$Djt1NFxR/2FN.H4L6zcP5uRCCOxk3vXV0owU57mJtQQGRsT.cFX/i', 'USER');
+('user1@test.com', '$2a$10$7/9gcAoI.k3ZRNLbQLYEtOhgaPyw.24OC8aejRhxBMBbl5kgWeZdC', 'USER'),
+('user2@test.com', '$2a$10$7/9gcAoI.k3ZRNLbQLYEtOhgaPyw.24OC8aejRhxBMBbl5kgWeZdC', 'USER'),
+('user3@test.com', '$2a$10$7/9gcAoI.k3ZRNLbQLYEtOhgaPyw.24OC8aejRhxBMBbl5kgWeZdC', 'USER');
 
 INSERT IGNORE INTO article (title, content, user_id, created_at)
 VALUES

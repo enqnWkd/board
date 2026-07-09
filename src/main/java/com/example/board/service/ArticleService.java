@@ -12,9 +12,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,6 +31,7 @@ public class ArticleService {
     private final ArticleRepository articleRepository;
     private final UserRepository userRepository;
     private final ArticleLikeService articleLikeService;
+    private final ViewCountService viewCountService;
 
     public ArticleResponse save(AddArticleRequest request, Long userId) {
         User user = userRepository.findById(userId)
@@ -40,7 +43,7 @@ public class ArticleService {
 
         log.info("게시글 저장 완료 - articleId: {}", savedArticle.getId());
 
-        return ArticleResponse.from(savedArticle, 0L, false);
+        return ArticleResponse.from(savedArticle, 0L, false, 0L);
     }
 
     public Page<ArticleResponse> findAll(Pageable pageable, Long userId) {
@@ -52,16 +55,18 @@ public class ArticleService {
                 .map(Article::getId)
                 .collect(toList());
 
-        // 한 번에 모든 좋아요 정보 가져오기 (새로운 메서드)
         Map<Long, Long> likeCounts = articleLikeService.getLikeCountsForArticles(articleIds);
         Map<Long, Boolean> userLikes = articleLikeService.getUserLikesForArticles(articleIds, userId);
+        Map<Long, Long> viewCounts =
+                viewCountService.getViewCounts(articles.getContent());
 
         return articles.map(article -> {
             Long likeCount = likeCounts.getOrDefault(article.getId(), 0L);
+            Long viewCount = viewCounts.getOrDefault(article.getId(), article.getViewCount());
             boolean likedByMe = userId != null &&
-                    articleLikeService.isLikedByUser(article.getId(), userId);
+            userLikes.getOrDefault(article.getId(), false);
 
-            return ArticleResponse.from(article, likeCount, likedByMe);
+            return ArticleResponse.from(article, likeCount, likedByMe, viewCount);
         });
     }
 
@@ -74,8 +79,9 @@ public class ArticleService {
         Long likeCount = articleLikeService.getLikeCount(articleId);
         boolean likedByMe = userId != null &&
                 articleLikeService.isLikedByUser(articleId, userId);
+        Long viewCount = viewCountService.getViewCount(article);
 
-        return ArticleResponse.from(article, likeCount, likedByMe);
+        return ArticleResponse.from(article, likeCount, likedByMe, viewCount);
     }
 
 
@@ -84,16 +90,15 @@ public class ArticleService {
         Article article = articleRepository.findByIdWithUser(articleId)
                 .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
 
-        //조회수 증가
-        article.incrementViewCount();
+        Long viewCount = viewCountService.increase(article);
 
         Long likeCount = articleLikeService.getLikeCount(articleId);
         boolean likedByMe = userId != null &&
                 articleLikeService.isLikedByUser(articleId, userId);
 
-        log.info("게시글 조회 - articleId: {}, 조회수: {}", articleId, article.getViewCount());
+        log.info("게시글 조회 - articleId: {}, 조회수: {}", articleId, viewCount);
 
-        return ArticleResponse.from(article, likeCount, likedByMe);
+        return ArticleResponse.from(article, likeCount, likedByMe, viewCount);
     }
 
 
@@ -131,10 +136,11 @@ public class ArticleService {
         //redis에서 좋아요 수 조회
         Long likeCount = articleLikeService.getLikeCount(articleId);
         boolean likedByMe = articleLikeService.isLikedByUser(articleId, userId);
+        Long viewCount = viewCountService.getViewCount(article);
 
         log.info("게시글 수정 완료 - articleId: {}", articleId);
 
-        return ArticleResponse.from(article, likeCount, likedByMe);
+        return ArticleResponse.from(article, likeCount, likedByMe, viewCount);
     }
 
     @Transactional(readOnly = true)
@@ -147,8 +153,9 @@ public class ArticleService {
             Long likeCount = articleLikeService.getLikeCount(article.getId());
             boolean likedByMe = userId != null &&
                     articleLikeService.isLikedByUser(article.getId(), userId);
+            Long viewCount = viewCountService.getViewCount(article);
 
-            return ArticleResponse.from(article, likeCount, likedByMe);
+            return ArticleResponse.from(article, likeCount, likedByMe, viewCount);
         });
     }
 }

@@ -54,10 +54,6 @@ public class Article {
     @Version //낙관적 락
     private Long version;
 
-    public void incrementViewCount() {
-        this.viewCount++;
-    }
-
     @Builder
     public Article(String title, String content, User user) {
         this.title = title;
