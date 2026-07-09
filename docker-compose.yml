@@ -7,10 +7,12 @@ services:
     ports:
       - "8080:8080"
     environment:
+      SPRING_PROFILES_ACTIVE: prod
       JWT_SECRET: ${JWT_SECRET}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     depends_on:
       mysql:
-        condition: service_healthy  # MySQL이 healthy 상태일 때만 Spring 시작
+        condition: service_healthy  # mysql이 healthy 상태일 때만 Spring 시작
       redis:
         condition: service_started
   mysql:
@@ -28,7 +30,7 @@ services:
       interval: 5s    # 5초마다 체크
       timeout: 5s     # 5초 안에 응답 없으면 실패
       retries: 10     # 10번까지 재시도
-      start_period: 30s  # 처음 30초는 실패해도 무시 (초기화 시간)
+      start_period: 30s  # 처음 30초는 실패해도 무시
 
   redis:
     image: redis:7-alpine
