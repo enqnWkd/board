@@ -16,9 +16,9 @@ export const options = {
 
 export function setup() {
     const loginRes = http.post(
-        'http://3.26.180.235:8080/auth/login',
+        'http://3.27.88.6:8080/auth/login',
         JSON.stringify({
-         email: 'hiiii@test.com', password: 'test'
+         email: 'testuser1@test.com', password: '1234'
          }),
         {
             headers: { 'Content-Type': 'application/json'
@@ -36,7 +36,7 @@ export function setup() {
 }
 
 export default function (data) {
-    const res = http.get('http://3.26.180.235:8080/api/articles/1', {
+    const res = http.get('http://3.27.88.6:8080/api/articles/1', {
         headers: { Authorization: `Bearer ${data.token}` },
     });
 

@@ -4,14 +4,15 @@ import com.example.board.domain.Article;
 import com.example.board.repository.ArticleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -24,7 +25,7 @@ public class ViewCountService {
 
     private static final String VIEW_COUNT_KEY_PREFIX = "viewCount:";
 
-    private Long getOrInitializeViewCount(Article article) {
+    public Long getViewCount(Article article) {
         String viewKey = VIEW_COUNT_KEY_PREFIX + article.getId();
         String cached = redisTemplate.opsForValue().get(viewKey);
 
@@ -33,21 +34,17 @@ public class ViewCountService {
             long dbCount = article.getViewCount();
             redisTemplate.opsForValue().set(viewKey, String.valueOf(dbCount));
             return dbCount;
-        } else {
-            return Long.parseLong(cached);
         }
+
+        return Long.parseLong(cached);
     }
 
     public Long increase(Article article) {
-        getOrInitializeViewCount(article);
+        getViewCount(article);
 
         String key = VIEW_COUNT_KEY_PREFIX + article.getId();
 
         return redisTemplate.opsForValue().increment(key);
-    }
-
-    public Long getViewCount(Article article) {
-        return getOrInitializeViewCount(article);
     }
 
     public Map<Long, Long> getViewCounts(List<Article> articles) {
@@ -56,7 +53,7 @@ public class ViewCountService {
         for (Article article : articles) {
             result.put(
                     article.getId(),
-                    getOrInitializeViewCount(article)
+                    getViewCount(article)
             );
         }
         return result;
@@ -64,30 +61,44 @@ public class ViewCountService {
 
     public void syncToDatabase() {
 
-        Set<String> keys = redisTemplate.keys(VIEW_COUNT_KEY_PREFIX + "*");
+        ScanOptions options = ScanOptions.scanOptions()
+                .match(VIEW_COUNT_KEY_PREFIX + "*")
+                .count(100)
+                .build();
 
-        log.info("조회수 DB 동기화 시작 - 대상 {}건", keys.size());
+        redisTemplate.execute((RedisCallback<Void>) connection -> {
 
-        if (keys == null || keys.isEmpty()) {
-            return;
-        }
+            int updatedCount = 0;
 
-        for (String key : keys) {
-            Long articleId = Long.parseLong(
-                    key.substring(VIEW_COUNT_KEY_PREFIX.length())
-            );
+            try (Cursor<byte[]> cursor = connection.scan(options)) {
 
-            String value = redisTemplate.opsForValue().get(key);
+                while (cursor.hasNext()) {
 
-            if (value == null) {
-                continue;
+                    byte[] keyBytes = cursor.next();
+                    String key = new String(keyBytes, StandardCharsets.UTF_8);
+
+                    Long articleId = Long.parseLong(
+                            key.substring(VIEW_COUNT_KEY_PREFIX.length())
+                    );
+
+                    byte[] valueBytes = connection.get(keyBytes);
+
+                    if (valueBytes == null) {
+                        continue;
+                    }
+
+                    Long viewCount = Long.parseLong(
+                            new String(valueBytes, StandardCharsets.UTF_8)
+                    );
+
+                    articleRepository.updateViewCount(articleId, viewCount);
+                    updatedCount++;
+                }
             }
 
-            Long viewCount = Long.parseLong(value);
+            log.info("조회수 DB 동기화 완료 - {}건", updatedCount);
 
-            articleRepository.updateViewCount(articleId, viewCount);
-
-            log.info("조회수 DB 동기화 완료");
-        }
+            return null;
+        });
     }
 }

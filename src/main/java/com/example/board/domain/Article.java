@@ -66,4 +66,8 @@ public class Article {
         this.content = content;
     }
 
+    public void updateViewCount(Long viewCount) {
+        this.viewCount = viewCount;
+    }
+
 }

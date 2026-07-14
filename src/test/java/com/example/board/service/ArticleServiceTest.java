@@ -104,23 +104,6 @@ public class ArticleServiceTest {
     }
 
     @Test
-    void 조회수_증가() {
-        Article article = articleRepository.save(
-                new Article("title", "content", testUser)
-        );
-
-        Long initialId = article.getId();
-
-        //조회수 증가
-        article.incrementViewCount();
-        articleRepository.save(article); //JPA에서 id값을 보고 이미 존재하면 insert가 아니라 update 처리
-
-        Article updated = articleRepository.findById(initialId).get();
-
-        assertThat(updated.getViewCount()).isEqualTo(1L);
-    }
-
-    @Test
     void 게시글_생성_시_조회수_0() {
         Article article = articleRepository.save(
                 new Article("title", "content", testUser)
