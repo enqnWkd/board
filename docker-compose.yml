@@ -1,0 +1,45 @@
+version: '3.8'
+services:
+
+  spring:
+    build: .
+    container_name: board_app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      JWT_SECRET: ${JWT_SECRET}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    depends_on:
+      mysql:
+        condition: service_healthy  # mysql이 healthy 상태일 때만 Spring 시작
+      redis:
+        condition: service_started
+  mysql:
+    image: mysql:8.0
+    container_name: board_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: board
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s    # 5초마다 체크
+      timeout: 5s     # 5초 안에 응답 없으면 실패
+      retries: 10     # 10번까지 재시도
+      start_period: 30s  # 처음 30초는 실패해도 무시
+
+  redis:
+    image: redis:7-alpine
+    container_name: board_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  mysql_data:
+  redis_data:
