@@ -4,16 +4,20 @@
 - 성능 개선과 데이터 정합성, 유지보수성을 고려한 설계 및 구현을 목표로 개발했습니다.
 
 
+
 # ✅ 사용 기술 및 개발 환경
-Spring Boot, Gradle, Java17, IntelliJ, JWT, MySQL, Redis, Docker, AWS EC2
+Spring Boot, Java17, Gradle, IntelliJ, JWT, MySQL, Redis, Docker, AWS EC2, Github Actions
+
 
 
 # ✅ 시스템 아키텍처
-<img width="641" height="395" alt="board_서버구조도" src="https://github.com/user-attachments/assets/332d6cd5-9b00-42cd-ae31-a3e601386f98" />
+<img width="866" height="457" alt="board_서버구조도" src="https://github.com/user-attachments/assets/1f9aafa7-abfc-4b33-b051-32935e9293f3" />
+
 
 
 # ✅ ERD
 <img width="865" height="675" alt="board_erd" src="https://github.com/user-attachments/assets/4cb4bc7c-7c27-45c1-85a1-42fa5efa73d2" />
+
 
 
 # ✅ 주요 기능
@@ -25,9 +29,17 @@ Spring Boot, Gradle, Java17, IntelliJ, JWT, MySQL, Redis, Docker, AWS EC2
 6. 좋아요 및 댓글 알림 - 다른 사람이 활동한 경우
 
 
+
 # ✅ 성능 개선
 - Redis INCR를 활용하여 조회수 DB 쓰기 병목 완화
 - Scheduler를 통한 Redis 조회수와 DB 간 데이터 동기화
 - Redis KEYS 명령을 SCAN 기반으로 개선하여 블로킹 이슈 완화
 - WebSocket(STOMP) 기반 실시간 알림 및 비동기 처리
 - Apache Bench(ab)와 k6를 활용한 부하 테스트 및 병목 분석
+
+
+
+# ✅ CI/CD
+- GitHub Actions를 활용한 자동 테스트 및 빌드 환경 구축
+- main 브랜치 병합 시 EC2 자동 배포
+- Docker Compose 기반 애플리케이션 자동 재배포
