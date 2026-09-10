@@ -3,21 +3,29 @@ package com.example.board.service;
 import com.example.board.domain.Article;
 import com.example.board.domain.User;
 import com.example.board.domain.UserRole;
+import com.example.board.dto.request.AddArticleRequest;
+import com.example.board.dto.request.UpdateArticleRequest;
 import com.example.board.dto.response.ArticleResponse;
+import com.example.board.exception.ContentInspectionException;
+import com.example.board.exception.Errorcode;
 import com.example.board.repository.ArticleRepository;
 import com.example.board.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 @Transactional
@@ -34,6 +42,9 @@ public class ArticleServiceTest {
 
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
+
+    @MockBean
+    private ArticleContentInspectionService articleContentInspectionService;
 
     private User testUser;
 
@@ -115,6 +126,76 @@ public class ArticleServiceTest {
         //then
         assertEquals(0L, saved.getViewCount());
         assertNotNull(saved.getId());
+    }
+
+    @Test
+    void 콘텐츠_검사_정상이면_게시글_작성과_수정에_성공한다() {
+        ArticleResponse saved = articleService.save(
+                new AddArticleRequest("제목", "내용"),
+                testUser.getId()
+        );
+
+        ArticleResponse updated = articleService.update(
+                saved.getId(),
+                new UpdateArticleRequest("수정 제목", "수정 내용"),
+                testUser.getId()
+        );
+
+        assertThat(updated.getTitle()).isEqualTo("수정 제목");
+        assertThat(updated.getContent()).isEqualTo("수정 내용");
+        verify(articleContentInspectionService).inspect("제목", "내용");
+        verify(articleContentInspectionService).inspect("수정 제목", "수정 내용");
+    }
+
+    @Test
+    void 광고성_콘텐츠면_게시글을_저장하지_않는다() {
+        doThrow(new ContentInspectionException(Errorcode.ADVERTISEMENT_CONTENT))
+                .when(articleContentInspectionService).inspect("광고 제목", "광고 내용");
+
+        assertThatThrownBy(() -> articleService.save(
+                new AddArticleRequest("광고 제목", "광고 내용"),
+                testUser.getId()
+        ))
+                .isInstanceOf(ContentInspectionException.class)
+                .extracting("errorCode")
+                .isEqualTo(Errorcode.ADVERTISEMENT_CONTENT);
+
+        assertThat(articleRepository.findAll()).isEmpty();
+    }
+
+    @Test
+    void 부적절한_콘텐츠면_게시글을_수정하지_않는다() {
+        Article article = articleRepository.save(new Article("원본 제목", "원본 내용", testUser));
+        doThrow(new ContentInspectionException(Errorcode.INAPPROPRIATE_CONTENT))
+                .when(articleContentInspectionService).inspect("수정 제목", "부적절한 내용");
+
+        assertThatThrownBy(() -> articleService.update(
+                article.getId(),
+                new UpdateArticleRequest("수정 제목", "부적절한 내용"),
+                testUser.getId()
+        ))
+                .isInstanceOf(ContentInspectionException.class)
+                .extracting("errorCode")
+                .isEqualTo(Errorcode.INAPPROPRIATE_CONTENT);
+
+        assertThat(article.getTitle()).isEqualTo("원본 제목");
+        assertThat(article.getContent()).isEqualTo("원본 내용");
+    }
+
+    @Test
+    void OpenAI_오류면_게시글을_저장하지_않는다() {
+        doThrow(new ContentInspectionException(Errorcode.OPENAI_SERVICE_UNAVAILABLE))
+                .when(articleContentInspectionService).inspect("제목", "내용");
+
+        assertThatThrownBy(() -> articleService.save(
+                new AddArticleRequest("제목", "내용"),
+                testUser.getId()
+        ))
+                .isInstanceOf(ContentInspectionException.class)
+                .extracting("errorCode")
+                .isEqualTo(Errorcode.OPENAI_SERVICE_UNAVAILABLE);
+
+        assertThat(articleRepository.findAll()).isEmpty();
     }
 
 }
