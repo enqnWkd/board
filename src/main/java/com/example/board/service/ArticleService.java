@@ -32,10 +32,13 @@ public class ArticleService {
     private final UserRepository userRepository;
     private final ArticleLikeService articleLikeService;
     private final ViewCountService viewCountService;
+    private final ArticleContentInspectionService articleContentInspectionService;
 
     public ArticleResponse save(AddArticleRequest request, Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException(Errorcode.USER_NOT_FOUND));
+
+        articleContentInspectionService.inspect(request.getTitle(), request.getContent());
 
         Article article = request.toEntity();
         article.setUser(user);
@@ -130,6 +133,8 @@ public class ArticleService {
         if (!article.getUser().getId().equals(userId)) {
             throw new AccessDeniedException(Errorcode.ACCESS_DENIED);
         }
+
+        articleContentInspectionService.inspect(request.getTitle(), request.getContent());
 
         article.update(request.getTitle(), request.getContent());
 

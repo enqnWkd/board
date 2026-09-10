@@ -33,4 +33,13 @@ public class CustomExceptionHandler {
                 .body(ErrorResponse.from(code));
     }
 
+    @ExceptionHandler(ContentInspectionException.class)
+    public ResponseEntity<ErrorResponse> handleContentInspectionException(ContentInspectionException e) {
+        Errorcode code = e.getErrorCode();
+
+        return ResponseEntity
+                .status(code.getStatus())
+                .body(ErrorResponse.from(code));
+    }
+
 }

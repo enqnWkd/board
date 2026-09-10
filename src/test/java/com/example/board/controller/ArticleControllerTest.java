@@ -7,10 +7,12 @@ import com.example.board.dto.request.AddArticleRequest;
 import com.example.board.dto.request.UpdateArticleRequest;
 import com.example.board.exception.Errorcode;
 import com.example.board.exception.NotFoundException;
+import com.example.board.exception.ContentInspectionException;
 import com.example.board.repository.ArticleRepository;
 import com.example.board.repository.NotificationRepository;
 import com.example.board.repository.UserRepository;
 import com.example.board.security.CustomUserDetails;
+import com.example.board.service.ArticleContentInspectionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -18,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -31,6 +34,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.Mockito.doThrow;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -50,6 +54,9 @@ class ArticleControllerTest {
 
     @Autowired
     private NotificationRepository notificationRepository;
+
+    @MockBean
+    private ArticleContentInspectionService articleContentInspectionService;
 
     private User testUser;
 
@@ -217,6 +224,31 @@ class ArticleControllerTest {
                 .orElseThrow(() -> new NotFoundException(Errorcode.ARTICLE_NOT_FOUND));
         assertThat(updated.getTitle()).isEqualTo("수정된 제목");
         assertThat(updated.getContent()).isEqualTo("수정된 내용");
+    }
+
+    @DisplayName("부적절한 게시글은 오류 응답을 반환한다")
+    @Test
+    void rejectInappropriateArticle() throws Exception {
+        AddArticleRequest request = new AddArticleRequest("제목", "부적절한 내용");
+        doThrow(new ContentInspectionException(Errorcode.INAPPROPRIATE_CONTENT))
+                .when(articleContentInspectionService).inspect("제목", "부적절한 내용");
+
+        mockMvc.perform(
+                        post("/api/articles")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                                .with(authentication(
+                                        new UsernamePasswordAuthenticationToken(
+                                                new CustomUserDetails(testUser),
+                                                null,
+                                                List.of()
+                                        )
+                                ))
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("INAPPROPRIATE_CONTENT"));
+
+        assertThat(articleRepository.findAll()).isEmpty();
     }
 
     @DisplayName("게시글 삭제 성공")
